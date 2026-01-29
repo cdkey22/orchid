@@ -1,0 +1,47 @@
+services:
+  app:
+    image: orchid:latest
+    ports:
+      - "8080:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      API_PREFIX: /api/v1
+      # Configuration MySQL
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: tech_test
+      DB_USER: root
+      DB_PASSWORD: root_password
+      # Configuration Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # Configuration RabbitMQ
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+    depends_on:
+      - mysql
+      - redis
+      - rabbitmq
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: tech_test
+      MYSQL_ROOT_PASSWORD: root_password
+    ports:
+      - "3306:3306"
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
