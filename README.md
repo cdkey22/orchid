@@ -146,6 +146,33 @@ L'application suit une architecture en couches :
 - **DAO** : Gèrent l'accès aux sources de données (MySQL, Redis, RabbitMQ)
 - **Models/DTO** : Définissent les structures de données typées
 
+## Choix d'implémentations
+
+- Typage fort
+
+Tous les champs métier sont typés avec un type dédié. 
+Cette approche issue du BDD (Behaviour Driven Development) permet d'implémenter les contraintes métiers au sein du code de façon structurelle.
+
+De plus la description des tables de la BDD (Base de données) sont très contraintes afin de garantir l'intégritée maximale des données.
+
+- Séparation des données et SQL Natif
+
+Pour ce projet nous n'allons pas utiliser d'ORM et décorréler toute la maintenance applicative de la BDD du code. 
+
+Toutes la partie structure de la BDD est dans des scripts dédiées. 
+Les éventuelles migrations techniques (modification de tables, ajout de tables, ...) seront gérée hors du code applicatif.
+
+- Pas de code métier dans la persistence
+
+Afin de ne pas avoir de règles métier un peu partout, l'ensemble des règles métiers sera centralisée dans l'applicatif.
+
+Ainsi le remplissage de la table order_history ne serra pas gérer via une procèdure stockée dans la BDD. 
+
+La très lègere perte de performance induite par ce choix, se justifie par la centralisation et une meilleure lisibilités des règles métiers.
+
+Cette règle pourra évoluer en fonction des contraintes de performance 
+
+
 ## Technologies
 
 - **TypeScript** - Typage statique et meilleure maintenabilité du code
