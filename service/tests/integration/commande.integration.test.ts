@@ -2,9 +2,9 @@ import request from 'supertest';
 import express, { Application } from 'express';
 import { CommandeController } from '@/controllers/commande.controller';
 import { CommandeService } from '@/services/commande.service';
-import { BddCommandeService } from '@/dao/bddCommande';
-import { RabbitmqCommandeService } from '@/dao/rabbitmqCommande';
-import { RedisCommandeService } from '@/dao/redisCommande';
+import { BddCommandeDao } from '@/dao/bddCommande';
+import { RabbitmqCommandeDao } from '@/dao/rabbitmqCommande';
+import { RedisCommandeDao } from '@/dao/redisCommande';
 import {
   cleanDatabase,
   consumeMessage,
@@ -77,13 +77,13 @@ describe('POST /api/v1/commandes', () => {
     app.use(express.json());
 
     // Créer les vraies instances
-    const bddCommandeService = new BddCommandeService();
-    const rabbitmqCommandeService = new RabbitmqCommandeService();
-    const redisCommandeService = new RedisCommandeService();
+    const bddCommandeDao = new BddCommandeDao();
+    const rabbitmqCommandeDao = new RabbitmqCommandeDao();
+    const redisCommandeDao = new RedisCommandeDao();
     const commandeService = new CommandeService();
-    (commandeService as any).bddCommandeService = bddCommandeService;
-    (commandeService as any).rabbitmqCommandeService = rabbitmqCommandeService;
-    (commandeService as any).redisCommandeService = redisCommandeService;
+    (commandeService as any).bddCommandeDao = bddCommandeDao;
+    (commandeService as any).rabbitmqCommandeDao = rabbitmqCommandeDao;
+    (commandeService as any).redisCommandeDao = redisCommandeDao;
 
     const commandeController = new CommandeController();
     (commandeController as any).commandeService = commandeService;

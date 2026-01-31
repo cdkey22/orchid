@@ -2,7 +2,7 @@ import { getRedisClient } from '@/config/redis';
 import logger from '@/config/logger';
 import { CommandeId, CommandeStatus } from '@/models/commande';
 
-export class RedisCommandeService {
+export class RedisCommandeDao {
   private getKey(commandeId: CommandeId): string {
     return `commande:${commandeId}:status`;
   }

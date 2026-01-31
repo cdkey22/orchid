@@ -1,17 +1,27 @@
 import { CommandeService } from '@/services/commande.service';
-import { BddCommandeService } from '@/dao/bddCommande';
+import { BddCommandeDao } from '@/dao/bddCommande';
+import { RabbitmqCommandeDao } from '@/dao/rabbitmqCommande';
+import { RedisCommandeDao } from '@/dao/redisCommande';
 import { ClientId, CommandeCreationDate, CommandeStatus } from '@/models/commande';
 
 jest.mock('@/dao/bddCommande');
+jest.mock('@/dao/rabbitmqCommande');
+jest.mock('@/dao/redisCommande');
 
 describe('CommandeService', () => {
   let commandeService: CommandeService;
-  let mockBddCommandeService: jest.Mocked<BddCommandeService>;
+  let mockBddCommandeDao: jest.Mocked<BddCommandeDao>;
+  let mockRabbitmqCommandeDao: jest.Mocked<RabbitmqCommandeDao>;
+  let mockRedisCommandeDao: jest.Mocked<RedisCommandeDao>;
 
   beforeEach(() => {
-    mockBddCommandeService = new BddCommandeService() as jest.Mocked<BddCommandeService>;
+    mockBddCommandeDao = new BddCommandeDao() as jest.Mocked<BddCommandeDao>;
+    mockRabbitmqCommandeDao = new RabbitmqCommandeDao() as jest.Mocked<RabbitmqCommandeDao>;
+    mockRedisCommandeDao = new RedisCommandeDao() as jest.Mocked<RedisCommandeDao>;
     commandeService = new CommandeService();
-    (commandeService as any).bddCommandeService = mockBddCommandeService;
+    (commandeService as any).bddCommandeDao = mockBddCommandeDao;
+    (commandeService as any).rabbitmqCommandeDao = mockRabbitmqCommandeDao;
+    (commandeService as any).redisCommandeDao = mockRedisCommandeDao;
   });
 
   afterEach(() => {
@@ -30,11 +40,19 @@ describe('CommandeService', () => {
         creationDate,
       };
 
-      mockBddCommandeService.createCommande = jest.fn().mockResolvedValue(mockCommande);
+      mockBddCommandeDao.createCommande = jest.fn().mockResolvedValue(mockCommande);
+      mockRedisCommandeDao.setStatus = jest.fn().mockResolvedValue(undefined);
+      mockRabbitmqCommandeDao.publishStatusChange = jest.fn().mockResolvedValue(undefined);
 
       const result = await commandeService.createCommande(clientId, creationDate);
 
-      expect(mockBddCommandeService.createCommande).toHaveBeenCalledWith(clientId, creationDate);
+      expect(mockBddCommandeDao.createCommande).toHaveBeenCalledWith(clientId, creationDate);
+      expect(mockRedisCommandeDao.setStatus).toHaveBeenCalledWith(mockCommande.id, mockCommande.status);
+      expect(mockRabbitmqCommandeDao.publishStatusChange).toHaveBeenCalledWith(
+        mockCommande.id,
+        mockCommande.clientId,
+        mockCommande.status
+      );
       expect(result).toEqual(mockCommande);
     });
 
@@ -46,14 +64,14 @@ describe('CommandeService', () => {
         'La date de création est dans le futur'
       );
 
-      expect(mockBddCommandeService.createCommande).not.toHaveBeenCalled();
+      expect(mockBddCommandeDao.createCommande).not.toHaveBeenCalled();
     });
 
     it('devrait propager les erreurs du DAO', async () => {
       const clientId = 123 as ClientId;
       const creationDate = new Date('2024-01-15T10:00:00Z') as CommandeCreationDate;
 
-      mockBddCommandeService.createCommande = jest
+      mockBddCommandeDao.createCommande = jest
         .fn()
         .mockRejectedValue(new Error('Database error'));
 
