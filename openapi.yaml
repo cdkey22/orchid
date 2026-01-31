@@ -114,6 +114,88 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /commandes/{id}/status:
+    patch:
+      tags:
+        - Commandes
+      summary: Mettre à jour le statut d'une commande
+      description: |
+        Met à jour le statut d'une commande existante.
+
+        **Workflow des statuts** :
+        ```
+        RECEIVED → PAID → PREPARING → SENT
+        ```
+
+        Les transitions ne peuvent se faire que vers l'avant (pas de retour en arrière).
+        Les sauts de statut sont autorisés (ex: RECEIVED → PREPARING).
+      operationId: updateCommandeStatus
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identifiant de la commande
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStatusRequest'
+            example:
+              status: PAID
+      responses:
+        '204':
+          description: Statut mis à jour avec succès
+        '400':
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                idInvalide:
+                  summary: Identifiant invalide
+                  value:
+                    message: L'identifiant de commande est invalide
+                statutManquant:
+                  summary: Statut manquant
+                  value:
+                    message: Aucun statut n'est fourni
+                statutInvalide:
+                  summary: Statut invalide
+                  value:
+                    message: Le statut fourni est invalide
+                workflowInvalide:
+                  summary: Workflow de statut invalide
+                  value:
+                    message: Le status voulu pour la commande est invalide
+        '404':
+          description: Commande non trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Commande 123 non trouvée
+        '415':
+          description: Content-Type non supporté
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnsupportedMediaType'
+              example:
+                error: Unsupported Media Type
+                message: Content-Type must be application/json
+        '500':
+          description: Erreur interne
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
 components:
   schemas:
     VersionInfo:
@@ -170,9 +252,19 @@ components:
           type: string
           description: Identifiant de la commande créée
 
+    UpdateStatusRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/CommandeStatus'
+
     CommandeStatus:
       type: string
-      description: Statut d'une commande
+      description: |
+        Statut d'une commande. Le workflow suit un ordre linéaire et irréversible :
+        RECEIVED → PAID → PREPARING → SENT
       enum:
         - RECEIVED
         - PAID

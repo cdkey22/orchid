@@ -104,12 +104,45 @@ npm run test:coverage      # Avec rapport de couverture
 Tests top-to-bottom avec **Testcontainers** (MySQL + RabbitMQ + Redis dans Docker).
 
 ```bash
-npm run test:integration           # Exécuter les tests d'intégration
-npm run test:watch:integration     # Mode watch
-npm run test:coverage:integration  # Avec rapport de couverture
+npm run test:integration             # Exécuter les tests d'intégration
+npm run test:integration:keep-alive  # Garder les conteneurs actifs après les tests
+npm run test:watch:integration       # Mode watch
+npm run test:coverage:integration    # Avec rapport de couverture
 ```
 
 **Prérequis** : Docker doit être en cours d'exécution.
+
+#### Optimisation des temps d'exécution
+
+Les conteneurs Docker sont configurés avec l'option `reuse` pour être réutilisés entre les exécutions de tests. Pour activer cette fonctionnalité, créer le fichier `~/.testcontainers.properties` :
+
+```properties
+testcontainers.reuse.enable=true
+```
+
+**Chemin** :
+`~/.testcontainers.properties`
+
+**Garder les conteneurs actifs** :
+
+Par défaut, les conteneurs sont arrêtés à la fin des tests. Pour les garder actifs (utile en développement) :
+
+```bash
+# Via le script npm
+npm run test:integration:keep-alive
+
+# Ou via la variable d'environnement
+TESTCONTAINERS_KEEP_ALIVE=true npm run test:integration
+```
+
+**Avantages** :
+- Premier run : Les conteneurs sont démarrés en parallèle
+- Runs suivants : Les conteneurs existants sont réutilisés (gain significatif)
+
+**Arrêter les conteneurs manuellement** :
+```bash
+npm run test:containers:stop
+```
 
 Les tests d'intégration vérifient :
 - L'insertion en base de données MySQL
@@ -275,8 +308,36 @@ Base URL : `http://localhost:3000/api/v1`
 |---------|----------|-------------|
 | GET | `/version` | Informations de version de l'API |
 | POST | `/commandes` | Créer une nouvelle commande |
+| PATCH | `/commandes/:id/status` | Mettre à jour le statut d'une commande |
 
 Documentation complète : [openapi.yaml](openapi.yaml)
+
+## Workflow des statuts
+
+Une commande suit un cycle de vie linéaire et irréversible :
+
+```
+┌──────────┐    ┌──────┐    ┌───────────┐    ┌──────┐
+│ RECEIVED │ ─► │ PAID │ ─► │ PREPARING │ ─► │ SENT │
+└──────────┘    └──────┘    └───────────┘    └──────┘
+```
+
+| Statut | Description |
+|--------|-------------|
+| `RECEIVED` | Commande reçue (statut initial à la création) |
+| `PAID` | Commande payée |
+| `PREPARING` | Commande en préparation |
+| `SENT` | Commande expédiée (statut final) |
+
+**Règles métier** :
+- Une commande est créée avec le statut `RECEIVED`
+- Les transitions ne peuvent se faire que vers l'avant (pas de retour en arrière)
+- Toute tentative de transition invalide retourne une erreur `400`
+
+**Exemple de transitions valides** :
+- `RECEIVED` → `PAID` ✅
+- `RECEIVED` → `PREPARING` ✅ (saut de statut autorisé)
+- `PAID` → `RECEIVED` ❌ (retour en arrière interdit)
 
 ## Événements RabbitMQ
 
