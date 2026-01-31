@@ -4,8 +4,7 @@ import { createLogger } from '@/config/logger';
 const logger = createLogger('Redis:Cfg');
 
 const REDIS_URL =
-  process.env.REDIS_URL ||
-  `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`;
+  process.env.REDIS_URL || `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`;
 
 let client: RedisClientType | null = null;
 

@@ -93,10 +93,7 @@ export class CommandeController {
       const { status } = req.body;
 
       if (!id) {
-        logger.info(
-          'PATCH /commandes/:id/status [400] ',
-          L_IDENTIFIANT_DE_COMMANDE_EST_INVALIDE
-        );
+        logger.info('PATCH /commandes/:id/status [400] ', L_IDENTIFIANT_DE_COMMANDE_EST_INVALIDE);
         generateError(res, 400, L_IDENTIFIANT_DE_COMMANDE_EST_INVALIDE);
         return;
       }
@@ -104,10 +101,7 @@ export class CommandeController {
       const commandeId = parseInt(id, 10);
 
       if (isNaN(commandeId) || commandeId <= 0) {
-        logger.info(
-          'PATCH /commandes/:id/status [400] ',
-          L_IDENTIFIANT_DE_COMMANDE_EST_INVALIDE
-        );
+        logger.info('PATCH /commandes/:id/status [400] ', L_IDENTIFIANT_DE_COMMANDE_EST_INVALIDE);
         generateError(res, 400, L_IDENTIFIANT_DE_COMMANDE_EST_INVALIDE);
         return;
       }
@@ -119,10 +113,7 @@ export class CommandeController {
       }
 
       if (!Object.values(CommandeStatus).includes(status)) {
-        logger.info(
-          'PATCH /commandes/:id/status [400] ',
-          LE_STATUT_FOURNI_EST_INVALIDE
-        );
+        logger.info('PATCH /commandes/:id/status [400] ', LE_STATUT_FOURNI_EST_INVALIDE);
         generateError(res, 400, LE_STATUT_FOURNI_EST_INVALIDE);
         return;
       }
