@@ -1,15 +1,18 @@
 import { ClientId, Commande, CommandeCreationDate } from '@/models/commande';
 import { BddCommandeService } from '@/dao/bddCommande';
 import { RabbitmqCommandeService } from '@/dao/rabbitmqCommande';
+import { RedisCommandeService } from '@/dao/redisCommande';
 import logger from '@/config/logger';
 
 export class CommandeService {
   private bddCommandeService: BddCommandeService;
   private rabbitmqCommandeService: RabbitmqCommandeService;
+  private redisCommandeService: RedisCommandeService;
 
   constructor() {
     this.bddCommandeService = new BddCommandeService();
     this.rabbitmqCommandeService = new RabbitmqCommandeService();
+    this.redisCommandeService = new RedisCommandeService();
   }
 
   async createCommande(clientId: ClientId, creationDate: CommandeCreationDate): Promise<Commande> {
@@ -26,6 +29,8 @@ export class CommandeService {
     logger.debug('Service: Stockage dans la bdd ...');
     const commande = await this.bddCommandeService.createCommande(clientId, creationDate);
     logger.info('Service: Commande créée', { commandeId: commande.id });
+
+    await this.redisCommandeService.setStatus(commande.id, commande.status);
 
     await this.rabbitmqCommandeService.publishStatusChange(
       commande.id,
