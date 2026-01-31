@@ -9,7 +9,7 @@ const RABBITMQ_URL =
 
 export const rabbitmqConfig = {
   queues: {
-    commandeStatusChanged: process.env.RABBITMQ_QUEUE_COMMANDE_STATUS || 'commande.status.changed',
+    commandeStatusChanged: process.env.RABBITMQ_QUEUE_COMMANDE_STATUS || 'order.notifications',
   },
 };
 

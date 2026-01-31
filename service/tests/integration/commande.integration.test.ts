@@ -16,7 +16,7 @@ import {
   stopAllContainers,
 } from './setup/testcontainers.setup';
 
-const QUEUE_NAME = 'commande.status.changed';
+const QUEUE_NAME = 'order.notifications';
 
 // Mock du pool MySQL pour utiliser le pool de testcontainers
 jest.mock('@/config/database', () => ({
