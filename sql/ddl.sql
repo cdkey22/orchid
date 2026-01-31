@@ -1,5 +1,5 @@
 -- Table des commandes
-CREATE TABLE orders
+CREATE TABLE IF NOT EXISTS orders
 (
     id            BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
     client_id     BIGINT UNSIGNED NOT NULL,
@@ -9,7 +9,7 @@ CREATE TABLE orders
 
 -- Table d'historique
 -- Il ne me semble pas nécessaire de gérer un id sur cette table (choix discutable si on veut respecter les formes normales)
-CREATE TABLE order_history
+CREATE TABLE IF NOT EXISTS order_history
 (
     order_id    BIGINT UNSIGNED NOT NULL,
     status      ENUM('RECEIVED', 'PAID', 'PREPARING', 'SENT') NOT NULL,
