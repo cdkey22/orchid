@@ -49,6 +49,10 @@ DB_USER=app_user
 DB_PASSWORD=app_password
 DB_CONNECTION_LIMIT=10
 
+# Redis
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
 # RabbitMQ
 RABBITMQ_HOST=localhost
 RABBITMQ_PORT=5672
@@ -97,7 +101,7 @@ npm run test:coverage      # Avec rapport de couverture
 
 ### Tests d'Intégration
 
-Tests top-to-bottom avec **Testcontainers** (MySQL + RabbitMQ dans Docker).
+Tests top-to-bottom avec **Testcontainers** (MySQL + RabbitMQ + Redis dans Docker).
 
 ```bash
 npm run test:integration           # Exécuter les tests d'intégration
@@ -110,6 +114,7 @@ npm run test:coverage:integration  # Avec rapport de couverture
 Les tests d'intégration vérifient :
 - L'insertion en base de données MySQL
 - La publication des messages dans RabbitMQ
+- Le stockage du statut dans Redis
 
 ### Tous les Tests
 
@@ -192,6 +197,7 @@ orchid/
     │   ├── config/
     │   │   ├── database.ts  # Pool de connexions MySQL
     │   │   ├── rabbitmq.ts  # Connexion RabbitMQ
+    │   │   ├── redis.ts     # Connexion Redis
     │   │   └── logger.ts    # Configuration Winston
     │   ├── controllers/     # Gestion des requêtes HTTP
     │   │   └── types/       # Types utilitaires API
@@ -299,3 +305,20 @@ Un message est publiée à chaque changement de statut d'une commande.
 - Queue durable
 - Messages persistants
 - Publiée lors de la création d'une commande (statut `RECEIVED`)
+
+## Cache Redis
+
+Le dernier statut de chaque commande est stocké dans Redis pour un accès rapide.
+
+**Format de la clé** :
+```
+commande:{commandeId}:status
+```
+
+**Exemple** :
+```
+commande:1:status = "RECEIVED"
+commande:2:status = "PAID"
+```
+
+Le statut est mis à jour à chaque changement de statut d'une commande.
