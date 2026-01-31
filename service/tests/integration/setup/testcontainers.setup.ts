@@ -6,6 +6,7 @@ import { join } from 'path';
 import mysql from 'mysql2/promise';
 import amqplib from 'amqplib';
 import { createClient, RedisClientType } from 'redis';
+import logger   from "@/config/logger";
 
 let mysqlContainer: StartedMySqlContainer | null = null;
 let rabbitmqContainer: StartedRabbitMQContainer | null = null;
@@ -23,7 +24,7 @@ export const startMySqlContainer = async (): Promise<StartedMySqlContainer> => {
     return mysqlContainer;
   }
 
-  console.log('🚀 Démarrage du conteneur MySQL pour les tests...');
+  logger.info('🚀 Démarrage du conteneur MySQL pour les tests...');
 
   mysqlContainer = await new MySqlContainer('mysql:8.0')
     .withDatabase('tech_test')
@@ -32,7 +33,7 @@ export const startMySqlContainer = async (): Promise<StartedMySqlContainer> => {
     .withExposedPorts(3306)
     .start();
 
-  console.log('✅ Conteneur MySQL démarré');
+  logger.info('✅ Conteneur MySQL démarré');
 
   // Créer le pool de connexions
   pool = mysql.createPool({
@@ -60,13 +61,13 @@ export const startRabbitMQContainer = async (): Promise<StartedRabbitMQContainer
     return rabbitmqContainer;
   }
 
-  console.log('🚀 Démarrage du conteneur RabbitMQ pour les tests...');
+  logger.info('🚀 Démarrage du conteneur RabbitMQ pour les tests...');
 
   rabbitmqContainer = await new RabbitMQContainer('rabbitmq:3.12-management')
     .withExposedPorts(5672, 15672)
     .start();
 
-  console.log('✅ Conteneur RabbitMQ démarré');
+  logger.info('✅ Conteneur RabbitMQ démarré');
 
   // Créer la connexion et le channel
   const amqpUrl = rabbitmqContainer.getAmqpUrl();
@@ -84,11 +85,11 @@ export const startRedisContainer = async (): Promise<StartedRedisContainer> => {
     return redisContainer;
   }
 
-  console.log('🚀 Démarrage du conteneur Redis pour les tests...');
+  logger.info('🚀 Démarrage du conteneur Redis pour les tests...');
 
   redisContainer = await new RedisContainer('redis:7').withExposedPorts(6379).start();
 
-  console.log('✅ Conteneur Redis démarré');
+  logger.info('✅ Conteneur Redis démarré');
 
   // Créer le client Redis
   const redisUrl = redisContainer.getConnectionUrl();
@@ -115,7 +116,7 @@ export const initializeDatabase = async (): Promise<void> => {
     // Exécuter tout le DDL en une seule fois (grâce à multipleStatements: true)
     await connection.query(ddl);
 
-    console.log('✅ Base de données initialisée avec le DDL');
+    logger.info('✅ Base de données initialisée avec le DDL');
   } finally {
     connection.release();
   }
@@ -161,10 +162,10 @@ export const stopMySqlContainer = async (): Promise<void> => {
   }
 
   if (mysqlContainer) {
-    console.log('🛑 Arrêt du conteneur MySQL...');
+    logger.info('🛑 Arrêt du conteneur MySQL...');
     await mysqlContainer.stop();
     mysqlContainer = null;
-    console.log('✅ Conteneur MySQL arrêté');
+    logger.info('✅ Conteneur MySQL arrêté');
   }
 };
 
@@ -183,10 +184,10 @@ export const stopRabbitMQContainer = async (): Promise<void> => {
   }
 
   if (rabbitmqContainer) {
-    console.log('🛑 Arrêt du conteneur RabbitMQ...');
+    logger.info('🛑 Arrêt du conteneur RabbitMQ...');
     await rabbitmqContainer.stop();
     rabbitmqContainer = null;
-    console.log('✅ Conteneur RabbitMQ arrêté');
+    logger.info('✅ Conteneur RabbitMQ arrêté');
   }
 };
 
@@ -200,10 +201,10 @@ export const stopRedisContainer = async (): Promise<void> => {
   }
 
   if (redisContainer) {
-    console.log('🛑 Arrêt du conteneur Redis...');
+    logger.info('🛑 Arrêt du conteneur Redis...');
     await redisContainer.stop();
     redisContainer = null;
-    console.log('✅ Conteneur Redis arrêté');
+    logger.info('✅ Conteneur Redis arrêté');
   }
 };
 

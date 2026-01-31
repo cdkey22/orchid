@@ -13,7 +13,7 @@ export class BddCommandeDao {
   async createCommande(clientId: ClientId, creationDate: CommandeCreationDate): Promise<Commande> {
     logger.debug('DAO: Acquisition connexion depuis le pool', { clientId });
     const connection = await pool.getConnection();
-REn
+
     try {
       logger.debug('DAO: Début de transaction');
       await connection.beginTransaction();
