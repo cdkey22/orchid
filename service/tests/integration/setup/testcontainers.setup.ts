@@ -1,15 +1,19 @@
 import { MySqlContainer, StartedMySqlContainer } from '@testcontainers/mysql';
 import { RabbitMQContainer, StartedRabbitMQContainer } from '@testcontainers/rabbitmq';
+import { RedisContainer, StartedRedisContainer } from '@testcontainers/redis';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import mysql from 'mysql2/promise';
 import amqplib from 'amqplib';
+import { createClient, RedisClientType } from 'redis';
 
 let mysqlContainer: StartedMySqlContainer | null = null;
 let rabbitmqContainer: StartedRabbitMQContainer | null = null;
+let redisContainer: StartedRedisContainer | null = null;
 let pool: mysql.Pool | null = null;
 let rabbitmqConnection: amqplib.ChannelModel | null = null;
 let rabbitmqChannel: amqplib.Channel | null = null;
+let redisClient: RedisClientType | null = null;
 
 /**
  * Démarre un conteneur MySQL pour les tests
@@ -70,6 +74,28 @@ export const startRabbitMQContainer = async (): Promise<StartedRabbitMQContainer
   rabbitmqChannel = await rabbitmqConnection.createChannel();
 
   return rabbitmqContainer;
+};
+
+/**
+ * Démarre un conteneur Redis pour les tests
+ */
+export const startRedisContainer = async (): Promise<StartedRedisContainer> => {
+  if (redisContainer) {
+    return redisContainer;
+  }
+
+  console.log('🚀 Démarrage du conteneur Redis pour les tests...');
+
+  redisContainer = await new RedisContainer('redis:7').withExposedPorts(6379).start();
+
+  console.log('✅ Conteneur Redis démarré');
+
+  // Créer le client Redis
+  const redisUrl = redisContainer.getConnectionUrl();
+  redisClient = createClient({ url: redisUrl });
+  await redisClient.connect();
+
+  return redisContainer;
 };
 
 /**
@@ -165,6 +191,23 @@ export const stopRabbitMQContainer = async (): Promise<void> => {
 };
 
 /**
+ * Arrête le conteneur Redis
+ */
+export const stopRedisContainer = async (): Promise<void> => {
+  if (redisClient && redisClient.isOpen) {
+    await redisClient.quit();
+    redisClient = null;
+  }
+
+  if (redisContainer) {
+    console.log('🛑 Arrêt du conteneur Redis...');
+    await redisContainer.stop();
+    redisContainer = null;
+    console.log('✅ Conteneur Redis arrêté');
+  }
+};
+
+/**
  * Récupère les informations de connexion MySQL
  */
 export const getConnectionConfig = () => {
@@ -232,4 +275,44 @@ export const purgeQueue = async (queueName: string): Promise<void> => {
   } catch {
     // La queue n'existe peut-être pas encore, ce n'est pas grave
   }
+};
+
+/**
+ * Récupère l'URL Redis pour les tests
+ */
+export const getRedisUrl = (): string => {
+  if (!redisContainer) {
+    throw new Error('Le conteneur Redis n\'est pas démarré');
+  }
+  return redisContainer.getConnectionUrl();
+};
+
+/**
+ * Récupère le client Redis pour les tests
+ */
+export const getTestRedisClient = (): RedisClientType => {
+  if (!redisClient) {
+    throw new Error('Le client Redis n\'est pas initialisé');
+  }
+  return redisClient;
+};
+
+/**
+ * Récupère une valeur Redis
+ */
+export const getRedisValue = async (key: string): Promise<string | null> => {
+  if (!redisClient) {
+    throw new Error('Le client Redis n\'est pas initialisé');
+  }
+  return await redisClient.get(key);
+};
+
+/**
+ * Vide toutes les clés Redis
+ */
+export const flushRedis = async (): Promise<void> => {
+  if (!redisClient) {
+    throw new Error('Le client Redis n\'est pas initialisé');
+  }
+  await redisClient.flushAll();
 };

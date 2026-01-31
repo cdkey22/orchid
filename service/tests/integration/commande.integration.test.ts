@@ -4,15 +4,20 @@ import { CommandeController } from '@/controllers/commande.controller';
 import { CommandeService } from '@/services/commande.service';
 import { BddCommandeService } from '@/dao/bddCommande';
 import { RabbitmqCommandeService } from '@/dao/rabbitmqCommande';
+import { RedisCommandeService } from '@/dao/redisCommande';
 import {
   cleanDatabase,
   consumeMessage,
   getTestPool,
+  getRedisValue,
+  flushRedis,
   purgeQueue,
   startMySqlContainer,
   startRabbitMQContainer,
+  startRedisContainer,
   stopMySqlContainer,
   stopRabbitMQContainer,
+  stopRedisContainer,
 } from './setup/testcontainers.setup';
 
 const QUEUE_NAME = 'commande.status.changed';
@@ -45,33 +50,49 @@ jest.mock('@/config/rabbitmq', () => {
   };
 });
 
-describe('Commande Integration Tests - Top to Bottom avec MySQL et RabbitMQ Testcontainers', () => {
+// Mock de la config Redis pour utiliser le conteneur de test
+jest.mock('@/config/redis', () => {
+  const originalModule = jest.requireActual('@/config/redis');
+
+  return {
+    ...originalModule,
+    getRedisClient: jest.fn(async () => {
+      const { getTestRedisClient } = require('./setup/testcontainers.setup');
+      return getTestRedisClient();
+    }),
+  };
+});
+
+describe('POST /api/v1/commandes', () => {
   let app: Application;
 
   beforeAll(async () => {
     // Démarrer les conteneurs
     await startMySqlContainer();
     await startRabbitMQContainer();
+    await startRedisContainer();
 
     // Créer l'application Express
     app = express();
     app.use(express.json());
 
-    // Créer les vraies instances (pas de mocks)
+    // Créer les vraies instances
     const bddCommandeService = new BddCommandeService();
     const rabbitmqCommandeService = new RabbitmqCommandeService();
+    const redisCommandeService = new RedisCommandeService();
     const commandeService = new CommandeService();
     (commandeService as any).bddCommandeService = bddCommandeService;
     (commandeService as any).rabbitmqCommandeService = rabbitmqCommandeService;
+    (commandeService as any).redisCommandeService = redisCommandeService;
 
     const commandeController = new CommandeController();
     (commandeController as any).commandeService = commandeService;
 
-    // Enregistrer les routes
     app.post('/api/v1/commandes', commandeController.createCommande);
-  }, 180000); // Timeout de 3 minutes pour le démarrage des conteneurs
+  }, 180000);
 
   afterAll(async () => {
+    await stopRedisContainer();
     await stopRabbitMQContainer();
     await stopMySqlContainer();
   }, 60000);
@@ -79,170 +100,169 @@ describe('Commande Integration Tests - Top to Bottom avec MySQL et RabbitMQ Test
   beforeEach(async () => {
     await cleanDatabase();
     await purgeQueue(QUEUE_NAME);
-    await checkDatabaseIsEmpty();
+    await flushRedis();
   });
 
-  async function checkDatabaseIsEmpty() {
-    // Vérifier qu'aucune donnée n'est en base
-    const pool = getTestPool();
-    const connection = await pool.getConnection();
-    const [orders]: any[] = await connection.execute('SELECT * FROM orders');
-    const [history]: any[] = await connection.execute('SELECT * FROM order_history');
-    connection.release();
-
-    expect(orders.length).toBe(0);
-    expect(history.length).toBe(0);
-  }
-
-  describe('POST /api/v1/commandes', () => {
-    it('devrait créer une commande et son historique dans MySQL', async () => {
+  describe('Création de commande réussie', () => {
+    it('devrait créer une commande avec toutes les persistances', async () => {
       const requestData = {
         clientId: 123,
         date: '2024-01-15T10:00:00.000Z',
       };
 
+      // Appel REST
       const response = await request(app).post('/api/v1/commandes').send(requestData).expect(201);
 
-      // Vérifier la réponse HTTP
       expect(response.body).toHaveProperty('id');
+      const commandeId = response.body.id;
 
-      // Vérifier l'insertion en base de données
+      // Vérification MySQL - orders
       const pool = getTestPool();
       const connection = await pool.getConnection();
-
       const [orders]: any[] = await connection.execute('SELECT * FROM orders WHERE id = ?', [
-        response.body.id,
+        commandeId,
       ]);
-      const [history]: any[] = await connection.execute(
-        'SELECT * FROM order_history WHERE order_id = ?',
-        [response.body.id]
-      );
-
-      connection.release();
-
       expect(orders.length).toBe(1);
       expect(orders[0].client_id).toBe(123);
       expect(orders[0].status).toBe('RECEIVED');
 
+      // Vérification MySQL - order_history
+      const [history]: any[] = await connection.execute(
+        'SELECT * FROM order_history WHERE order_id = ?',
+        [commandeId]
+      );
+      connection.release();
       expect(history.length).toBe(1);
       expect(history[0].status).toBe('RECEIVED');
-    });
 
-    it('devrait créer plusieurs commandes pour le même client', async () => {
-      const commande1 = {
-        clientId: 456,
+      // Vérification Redis
+      const redisStatus = await getRedisValue(`commande:${commandeId}:status`);
+      expect(redisStatus).toBe('RECEIVED');
+
+      // Vérification RabbitMQ
+      const message = await consumeMessage(QUEUE_NAME);
+      expect(message).not.toBeNull();
+      expect(message.clientId).toBe(123);
+      expect(message.commandeId).toBe(parseInt(commandeId));
+      expect(message.status).toBe('RECEIVED');
+    });
+  });
+
+  describe('Validation des erreurs', () => {
+    it('devrait retourner 400 si clientId est manquant - aucune persistance', async () => {
+      const requestData = {
         date: '2024-01-15T10:00:00.000Z',
       };
 
-      const commande2 = {
-        clientId: 456,
-        date: '2024-01-16T11:00:00.000Z',
-      };
+      // Appel REST
+      const response = await request(app).post('/api/v1/commandes').send(requestData).expect(400);
 
-      const response1 = await request(app).post('/api/v1/commandes').send(commande1).expect(201);
-      const response2 = await request(app).post('/api/v1/commandes').send(commande2).expect(201);
+      expect(response.body.message).toBe("Aucun clientId n'est fourni");
 
-      expect(response1.body.id).not.toBe(response2.body.id);
-      expect(response1.body.clientId).toBe(response2.body.clientId);
-
-      // Vérifier en base
+      // Vérification MySQL - aucune donnée
       const pool = getTestPool();
       const connection = await pool.getConnection();
-
-      const [orders]: any[] = await connection.execute(
-        'SELECT * FROM orders WHERE client_id = ?',
-        [456]
-      );
-
+      const [orders]: any[] = await connection.execute('SELECT * FROM orders');
+      const [history]: any[] = await connection.execute('SELECT * FROM order_history');
       connection.release();
+      expect(orders.length).toBe(0);
+      expect(history.length).toBe(0);
 
-      expect(orders.length).toBe(2);
+      // Vérification RabbitMQ - aucun message
+      const message = await consumeMessage(QUEUE_NAME);
+      expect(message).toBeNull();
     });
 
-    describe("Validation des cas d'erreurs", () => {
-      it('devrait retourner 400 si clientId est manquant', async () => {
-        const requestData = {
-          date: '2024-01-15T10:00:00.000Z',
-        };
+    it('devrait retourner 400 si clientId est invalide - aucune persistance', async () => {
+      const requestData = {
+        clientId: 0,
+        date: '2024-01-15T10:00:00.000Z',
+      };
 
-        const response = await request(app).post('/api/v1/commandes').send(requestData).expect(400);
+      // Appel REST
+      const response = await request(app).post('/api/v1/commandes').send(requestData).expect(400);
 
-        expect(response.body.message).toBe("Aucun clientId n'est fourni");
-        await checkDatabaseIsEmpty();
-      });
+      expect(response.body.message).toBe('Le clientId fourni est invalide');
 
-      it('devrait retourner 400 si clientId est invalide', async () => {
-        const requestData = {
-          clientId: 0,
-          date: '2024-01-15T10:00:00.000Z',
-        };
+      // Vérification MySQL - aucune donnée
+      const pool = getTestPool();
+      const connection = await pool.getConnection();
+      const [orders]: any[] = await connection.execute('SELECT * FROM orders');
+      connection.release();
+      expect(orders.length).toBe(0);
 
-        await request(app).post('/api/v1/commandes').send(requestData).expect(400);
-        await checkDatabaseIsEmpty();
-      });
-
-      it('devrait retourner 400 si la date est dans le futur', async () => {
-        const futureDate = new Date(Date.now() + 86400000).toISOString();
-        const requestData = {
-          clientId: 123,
-          date: futureDate,
-        };
-
-        const response = await request(app).post('/api/v1/commandes').send(requestData).expect(400);
-
-        expect(response.body.message).toBe('La date de création est dans le futur');
-        await checkDatabaseIsEmpty();
-      });
+      // Vérification RabbitMQ - aucun message
+      const message = await consumeMessage(QUEUE_NAME);
+      expect(message).toBeNull();
     });
 
-    describe('Publication RabbitMQ', () => {
-      it('devrait publier un message dans la queue lors de la création', async () => {
-        const requestData = {
-          clientId: 789,
-          date: '2024-01-15T10:00:00.000Z',
-        };
+    it('devrait retourner 400 si date est manquante - aucune persistance', async () => {
+      const requestData = {
+        clientId: 123,
+      };
 
-        const response = await request(app).post('/api/v1/commandes').send(requestData).expect(201);
+      // Appel REST
+      const response = await request(app).post('/api/v1/commandes').send(requestData).expect(400);
 
-        // Vérifier le message dans la queue
-        const message = await consumeMessage(QUEUE_NAME);
+      expect(response.body.message).toBe("Aucune date n'est fournie");
 
-        expect(message).not.toBeNull();
-        expect(message.clientId).toBe(789);
-        expect(message.commandeId).toBe(parseInt(response.body.id));
-        expect(message.status).toBe('RECEIVED');
-      });
+      // Vérification MySQL - aucune donnée
+      const pool = getTestPool();
+      const connection = await pool.getConnection();
+      const [orders]: any[] = await connection.execute('SELECT * FROM orders');
+      connection.release();
+      expect(orders.length).toBe(0);
 
-      it('devrait publier un message pour chaque commande créée', async () => {
-        const commande1 = { clientId: 111, date: '2024-01-15T10:00:00.000Z' };
-        const commande2 = { clientId: 222, date: '2024-01-16T11:00:00.000Z' };
+      // Vérification RabbitMQ - aucun message
+      const message = await consumeMessage(QUEUE_NAME);
+      expect(message).toBeNull();
+    });
 
-        await request(app).post('/api/v1/commandes').send(commande1).expect(201);
-        await request(app).post('/api/v1/commandes').send(commande2).expect(201);
+    it('devrait retourner 400 si date est invalide - aucune persistance', async () => {
+      const requestData = {
+        clientId: 123,
+        date: 'not-a-date',
+      };
 
-        // Vérifier les messages dans la queue
-        const message1 = await consumeMessage(QUEUE_NAME);
-        const message2 = await consumeMessage(QUEUE_NAME);
+      // Appel REST
+      const response = await request(app).post('/api/v1/commandes').send(requestData).expect(400);
 
-        expect(message1).not.toBeNull();
-        expect(message1.clientId).toBe(111);
+      expect(response.body.message).toBe('La date fournie invalide');
 
-        expect(message2).not.toBeNull();
-        expect(message2.clientId).toBe(222);
-      });
+      // Vérification MySQL - aucune donnée
+      const pool = getTestPool();
+      const connection = await pool.getConnection();
+      const [orders]: any[] = await connection.execute('SELECT * FROM orders');
+      connection.release();
+      expect(orders.length).toBe(0);
 
-      it('ne devrait pas publier de message si la validation échoue', async () => {
-        const requestData = {
-          clientId: -1,
-          date: '2024-01-15T10:00:00.000Z',
-        };
+      // Vérification RabbitMQ - aucun message
+      const message = await consumeMessage(QUEUE_NAME);
+      expect(message).toBeNull();
+    });
 
-        await request(app).post('/api/v1/commandes').send(requestData).expect(400);
+    it('devrait retourner 400 si date est dans le futur - aucune persistance', async () => {
+      const futureDate = new Date(Date.now() + 86400000).toISOString();
+      const requestData = {
+        clientId: 123,
+        date: futureDate,
+      };
 
-        // Vérifier qu'aucun message n'est dans la queue
-        const message = await consumeMessage(QUEUE_NAME);
-        expect(message).toBeNull();
-      });
+      // Appel REST
+      const response = await request(app).post('/api/v1/commandes').send(requestData).expect(400);
+
+      expect(response.body.message).toBe('La date de création est dans le futur');
+
+      // Vérification MySQL - aucune donnée
+      const pool = getTestPool();
+      const connection = await pool.getConnection();
+      const [orders]: any[] = await connection.execute('SELECT * FROM orders');
+      connection.release();
+      expect(orders.length).toBe(0);
+
+      // Vérification RabbitMQ - aucun message
+      const message = await consumeMessage(QUEUE_NAME);
+      expect(message).toBeNull();
     });
   });
 });

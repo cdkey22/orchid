@@ -22,6 +22,7 @@
   "devDependencies": {
     "@testcontainers/mysql": "^11.11.0",
     "@testcontainers/rabbitmq": "^11.11.0",
+    "@testcontainers/redis": "^11.11.0",
     "@types/amqplib": "^0.10.8",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
