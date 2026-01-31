@@ -20,5 +20,6 @@ router.get('/version', versionController.getVersion);
 
 const commandeController = new CommandeController();
 router.post('/commandes', commandeController.createCommande);
+router.patch('/commandes/:id/status', commandeController.updateStatus);
 
 export default router;

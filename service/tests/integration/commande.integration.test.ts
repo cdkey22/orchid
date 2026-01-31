@@ -12,12 +12,8 @@ import {
   getRedisValue,
   flushRedis,
   purgeQueue,
-  startMySqlContainer,
-  startRabbitMQContainer,
-  startRedisContainer,
-  stopMySqlContainer,
-  stopRabbitMQContainer,
-  stopRedisContainer,
+  startAllContainers,
+  stopAllContainers,
 } from './setup/testcontainers.setup';
 
 const QUEUE_NAME = 'commande.status.changed';
@@ -63,14 +59,13 @@ jest.mock('@/config/redis', () => {
   };
 });
 
-describe('POST /api/v1/commandes', () => {
+describe('Commande API', () => {
   let app: Application;
+  let commandeController: CommandeController;
 
   beforeAll(async () => {
-    // Démarrer les conteneurs
-    await startMySqlContainer();
-    await startRabbitMQContainer();
-    await startRedisContainer();
+    // Démarrer tous les conteneurs en parallèle
+    await startAllContainers();
 
     // Créer l'application Express
     app = express();
@@ -85,16 +80,15 @@ describe('POST /api/v1/commandes', () => {
     (commandeService as any).rabbitmqCommandeDao = rabbitmqCommandeDao;
     (commandeService as any).redisCommandeDao = redisCommandeDao;
 
-    const commandeController = new CommandeController();
+    commandeController = new CommandeController();
     (commandeController as any).commandeService = commandeService;
 
     app.post('/api/v1/commandes', commandeController.createCommande);
+    app.patch('/api/v1/commandes/:id/status', commandeController.updateStatus);
   }, 180000);
 
   afterAll(async () => {
-    await stopRedisContainer();
-    await stopRabbitMQContainer();
-    await stopMySqlContainer();
+    await stopAllContainers();
   }, 60000);
 
   beforeEach(async () => {
@@ -103,7 +97,8 @@ describe('POST /api/v1/commandes', () => {
     await flushRedis();
   });
 
-  describe('Création de commande réussie', () => {
+  describe('POST /api/v1/commandes', () => {
+    describe('Création de commande réussie', () => {
     it('devrait créer une commande avec toutes les persistances', async () => {
       const requestData = {
         clientId: 123,
@@ -263,6 +258,159 @@ describe('POST /api/v1/commandes', () => {
       // Vérification RabbitMQ - aucun message
       const message = await consumeMessage(QUEUE_NAME);
       expect(message).toBeNull();
+    });
+    });
+  });
+
+  describe('PATCH /api/v1/commandes/:id/status', () => {
+    const createTestCommande = async (): Promise<number> => {
+      const response = await request(app)
+        .post('/api/v1/commandes')
+        .send({
+          clientId: 123,
+          date: '2024-01-15T10:00:00.000Z',
+        })
+        .expect(201);
+
+      // Purger le message de création avant les tests de mise à jour
+      await consumeMessage(QUEUE_NAME);
+      return response.body.id;
+    };
+
+    describe('Mise à jour réussie', () => {
+      it('devrait mettre à jour le statut avec toutes les persistances', async () => {
+        const commandeId = await createTestCommande();
+
+        // Appel REST
+        await request(app)
+          .patch(`/api/v1/commandes/${commandeId}/status`)
+          .send({ status: 'PAID' })
+          .expect(204);
+
+        // Vérification MySQL - orders
+        const pool = getTestPool();
+        const connection = await pool.getConnection();
+        const [orders]: any[] = await connection.execute('SELECT * FROM orders WHERE id = ?', [
+          commandeId,
+        ]);
+        expect(orders[0].status).toBe('PAID');
+
+        // Vérification MySQL - order_history (2 entrées : RECEIVED + PAID)
+        const [history]: any[] = await connection.execute(
+          'SELECT * FROM order_history WHERE order_id = ? ORDER BY change_date',
+          [commandeId]
+        );
+        connection.release();
+        expect(history.length).toBe(2);
+        expect(history[0].status).toBe('RECEIVED');
+        expect(history[1].status).toBe('PAID');
+
+        // Vérification Redis
+        const redisStatus = await getRedisValue(`commande:${commandeId}:status`);
+        expect(redisStatus).toBe('PAID');
+
+        // Vérification RabbitMQ
+        const message = await consumeMessage(QUEUE_NAME);
+        expect(message).not.toBeNull();
+        expect(message.commandeId).toBe(commandeId);
+        expect(message.status).toBe('PAID');
+      });
+
+      it('devrait permettre plusieurs mises à jour successives', async () => {
+        const commandeId = await createTestCommande();
+
+        // Mise à jour vers PAID
+        await request(app)
+          .patch(`/api/v1/commandes/${commandeId}/status`)
+          .send({ status: 'PAID' })
+          .expect(204);
+        await consumeMessage(QUEUE_NAME);
+
+        // Mise à jour vers PREPARING
+        await request(app)
+          .patch(`/api/v1/commandes/${commandeId}/status`)
+          .send({ status: 'PREPARING' })
+          .expect(204);
+        await consumeMessage(QUEUE_NAME);
+
+        // Mise à jour vers SENT
+        await request(app)
+          .patch(`/api/v1/commandes/${commandeId}/status`)
+          .send({ status: 'SENT' })
+          .expect(204);
+
+        // Vérification MySQL - order_history (4 entrées)
+        const pool = getTestPool();
+        const connection = await pool.getConnection();
+        const [history]: any[] = await connection.execute(
+          'SELECT * FROM order_history WHERE order_id = ? ORDER BY change_date',
+          [commandeId]
+        );
+        connection.release();
+        expect(history.length).toBe(4);
+        expect(history.map((h: any) => h.status)).toEqual(['RECEIVED', 'PAID', 'PREPARING', 'SENT']);
+      });
+
+      it('devrait retourner 400 si le workflow de statut est invalide', async () => {
+        const commandeId = await createTestCommande();
+
+        // Mise à jour vers PAID
+        await request(app)
+          .patch(`/api/v1/commandes/${commandeId}/status`)
+          .send({ status: 'PAID' })
+          .expect(204);
+        await consumeMessage(QUEUE_NAME);
+
+        // Tentative de retour vers RECEIVED (invalide)
+        const response = await request(app)
+          .patch(`/api/v1/commandes/${commandeId}/status`)
+          .send({ status: 'RECEIVED' })
+          .expect(400);
+
+        expect(response.body.message).toBe('Le status voulu pour la commande est invalide');
+      });
+    });
+
+    describe('Validation des erreurs', () => {
+      it('devrait retourner 404 si la commande n\'existe pas', async () => {
+        const response = await request(app)
+          .patch('/api/v1/commandes/99999/status')
+          .send({ status: 'PAID' })
+          .expect(404);
+
+        expect(response.body.message).toBe('Commande 99999 non trouvée');
+      });
+
+      it('devrait retourner 400 si le statut est manquant', async () => {
+        const commandeId = await createTestCommande();
+
+        const response = await request(app)
+          .patch(`/api/v1/commandes/${commandeId}/status`)
+          .send({})
+          .expect(400);
+
+        expect(response.body.message).toBe("Aucun statut n'est fourni");
+      });
+
+      it('devrait retourner 400 si le statut est invalide', async () => {
+        const commandeId = await createTestCommande();
+
+        const response = await request(app)
+          .patch(`/api/v1/commandes/${commandeId}/status`)
+          .send({ status: 'INVALID_STATUS' })
+          .expect(400);
+
+        expect(response.body.message).toBe('Le statut fourni est invalide');
+      });
+
+      it('devrait retourner 400 si l\'id est invalide', async () => {
+        const response = await request(app)
+          .patch('/api/v1/commandes/invalid/status')
+          .send({ status: 'PAID' })
+          .expect(400);
+
+        expect(response.body.message).toBe("L'identifiant de commande est invalide");
+      });
     });
   });
 });
