@@ -4,13 +4,12 @@ API REST TypeScript avec MySQL, RabbitMQ et Redis
 
 ## Prérequis
 
-### Pour le développement
-- Node.js (v18 ou supérieur)
-- npm ou yarn
-- Accès à MySQL, Redis et RabbitMQ (via Docker ou installation locale)
-
-### Pour la production
-- Docker et Docker Compose (obligatoire)
+| Outil | Développement | Tests d'intégration | Production |
+|-------|:-------------:|:-------------------:|:----------:|
+| Node.js (v18+) | ✅ | ✅ | - |
+| npm | ✅ | ✅ | - |
+| Docker | - | ✅ (Testcontainers) | ✅ |
+| Docker Compose | Optionnel | - | ✅ |
 
 ## Environnement de développement
 
@@ -71,12 +70,62 @@ L'API sera accessible sur `http://localhost:3000/api/v1`
 
 - `npm run dev` - Démarrer le serveur en mode développement avec hot-reload
 - `npm run build` - Compiler le projet TypeScript
-- `npm test` - Lancer les tests
-- `npm run test:watch` - Lancer les tests en mode watch
-- `npm run test:coverage` - Générer le rapport de couverture des tests
 - `npm run lint` - Vérifier le code avec ESLint
 - `npm run lint:fix` - Corriger automatiquement les erreurs ESLint
 - `npm run format` - Formater le code avec Prettier
+
+## Tests
+
+Le projet utilise **Jest** avec deux types de tests :
+
+### Tests Unitaires
+
+Tests isolés avec mocks, sans dépendances externes.
+
+```bash
+npm run test:unit          # Exécuter les tests unitaires
+npm run test:watch         # Mode watch (développement)
+npm run test:coverage      # Avec rapport de couverture
+```
+
+### Tests d'Intégration
+
+Tests top-to-bottom avec **MySQL Testcontainers** (vraie base MySQL dans Docker).
+
+```bash
+npm run test:integration           # Exécuter les tests d'intégration
+npm run test:watch:integration     # Mode watch
+npm run test:coverage:integration  # Avec rapport de couverture
+```
+
+**Prérequis** : Docker doit être en cours d'exécution.
+
+### Tous les Tests
+
+```bash
+npm run test:all           # Tests unitaires + intégration
+npm run test:coverage:all  # Avec rapport de couverture complet
+```
+
+### Architecture des Tests
+
+```
+tests/
+├── unit/                    # Tests unitaires (avec mocks)
+│   └── services/
+└── integration/             # Tests d'intégration (MySQL Testcontainers)
+    ├── setup/
+    │   └── testcontainers.setup.ts
+    ├── commande.integration.test.ts
+    └── version.integration.test.ts
+```
+
+### Pourquoi Testcontainers ?
+
+- **100% compatible production** : Vraie base MySQL, pas de SQLite
+- **Isolé** : Conteneur jetable, aucun impact sur l'environnement
+- **Reproductible** : Même version MySQL que la production
+- **Autonome** : Pas besoin d'installer MySQL localement
 
 ## Déploiement en production
 
@@ -120,31 +169,48 @@ docker-compose restart app
 ## Structure du projet
 
 ```
-src/
-├── controllers/    # Contrôleurs REST - Gèrent les requêtes HTTP et retournent les réponses
-├── services/       # Services métier - Contiennent la logique métier de l'application
-├── dao/            # Couche données - Gèrent l'accès en lecture et en écriture à tous les système tiers de gestion de données (MySQL, Redis, RabbitMQ)
-├── models/         # Modèles de données métiers
-│   └── dto/        # Défini les modèles utilisée par l'api REST
-│   └── bo/         # Défini les objets metiers 
-├── routes/         # Définition des routes API et mapping vers les contrôleurs
-└── index.ts        # Point d'entrée de l'application - Configuration Express et middlewares
-
-tests/
-└── integration/    # Tests d'intégration des endpoints API
-
-service/
-└── Dockerfile      # Configuration Docker pour la construction de l'image
+orchid/
+├── docker-compose.yml       # Orchestration des services (app, mysql, redis, rabbitmq)
+├── sql/
+│   └── ddl.sql              # Scripts de création des tables
+│
+└── service/
+    ├── Dockerfile           # Image Docker de l'application
+    ├── src/
+    │   ├── index.ts         # Point d'entrée Express
+    │   ├── config/
+    │   │   ├── database.ts  # Pool de connexions MySQL
+    │   │   └── logger.ts    # Configuration Winston
+    │   ├── controllers/     # Gestion des requêtes HTTP
+    │   │   └── types/       # Types utilitaires API
+    │   ├── services/        # Logique métier
+    │   ├── dao/             # Accès aux données (MySQL, Redis, RabbitMQ)
+    │   ├── models/          # Modèles de données
+    │   │   ├── dto/         # Data Transfer Objects (API)
+    │   │   └── bo/          # Business Objects
+    │   ├── middlewares/     # Middlewares Express
+    │   └── routes/          # Définition des routes
+    │
+    └── tests/
+        ├── unit/            # Tests unitaires (avec mocks)
+        │   └── services/
+        └── integration/     # Tests d'intégration (Testcontainers)
+            └── setup/       # Configuration Testcontainers
 ```
 
-### Architecture
+### Architecture en couches
 
-L'application suit une architecture en couches :
-- **Routes** : Définissent les endpoints et valident les requêtes
-- **Controllers** : Orchestrent les appels aux services et formatent les réponses
-- **Services** : Contiennent la logique métier et orchestrent les accès aux données
-- **DAO** : Gèrent l'accès aux sources de données (MySQL, Redis, RabbitMQ)
-- **Models/DTO** : Définissent les structures de données typées
+```
+HTTP Request
+    ↓
+Routes          → Définition des endpoints
+    ↓
+Controllers     → Validation, orchestration, formatage réponses
+    ↓
+Services        → Logique métier
+    ↓
+DAO             → Accès aux données (MySQL, Redis, RabbitMQ)
+```
 
 ## Choix d'implémentations
 
@@ -185,5 +251,11 @@ Cette règle pourra évoluer en fonction des contraintes de performance
 
 ## API Endpoints
 
-### Version
-- `GET /api/v1/version` - Retourne les informations de version de l'API
+Base URL : `http://localhost:3000/api/v1`
+
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| GET | `/version` | Informations de version de l'API |
+| POST | `/commandes` | Créer une nouvelle commande |
+
+Documentation complète : [openapi.yaml](openapi.yaml)

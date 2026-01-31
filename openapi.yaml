@@ -1,0 +1,202 @@
+openapi: 3.0.3
+info:
+  title: Orchid API
+  description: API REST TypeScript avec MySQL, RabbitMQ et Redis
+  version: 1.0.0
+  contact:
+    name: Orchid Team
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Développement
+  - url: http://localhost:8080/api/v1
+    description: Production (Docker)
+
+tags:
+  - name: Version
+    description: Informations sur l'API
+  - name: Commandes
+    description: Gestion des commandes
+
+paths:
+  /version:
+    get:
+      tags:
+        - Version
+      summary: Informations de version
+      description: Retourne les informations de version de l'API et de l'environnement
+      operationId: getVersion
+      responses:
+        '200':
+          description: Informations de version
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionInfo'
+              example:
+                name: orchid
+                version: 1.0.0
+                description: API REST TypeScript
+                nodeVersion: v18.19.0
+                environment: development
+        '500':
+          description: Erreur interne
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /commandes:
+    post:
+      tags:
+        - Commandes
+      summary: Créer une commande
+      description: Crée une nouvelle commande pour un client
+      operationId: createCommande
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCommandeRequest'
+            example:
+              clientId: 123
+              date: '2024-01-15T10:30:00Z'
+      responses:
+        '201':
+          description: Commande créée avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateCommandeResponse'
+              example:
+                id: '1'
+        '400':
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                clientIdManquant:
+                  summary: ClientId manquant
+                  value:
+                    message: Aucun clientId n'est fourni
+                clientIdInvalide:
+                  summary: ClientId invalide
+                  value:
+                    message: Le clientId fourni est invalide
+                dateManquante:
+                  summary: Date manquante
+                  value:
+                    message: Aucune date n'est fournie
+                dateInvalide:
+                  summary: Date invalide
+                  value:
+                    message: La date fournie invalide
+                dateFuture:
+                  summary: Date dans le futur
+                  value:
+                    message: La date de création est dans le futur
+        '415':
+          description: Content-Type non supporté
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnsupportedMediaType'
+              example:
+                error: Unsupported Media Type
+                message: Content-Type must be application/json
+        '500':
+          description: Erreur interne
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    VersionInfo:
+      type: object
+      required:
+        - name
+        - version
+        - description
+        - nodeVersion
+        - environment
+      properties:
+        name:
+          type: string
+          description: Nom de l'application
+        version:
+          type: string
+          description: Version de l'application (semver)
+          pattern: ^\d+\.\d+\.\d+$
+        description:
+          type: string
+          description: Description de l'application
+        nodeVersion:
+          type: string
+          description: Version de Node.js
+        environment:
+          type: string
+          description: Environnement d'exécution
+          enum:
+            - development
+            - production
+            - test
+
+    CreateCommandeRequest:
+      type: object
+      required:
+        - clientId
+        - date
+      properties:
+        clientId:
+          type: integer
+          minimum: 1
+          description: Identifiant du client
+        date:
+          type: string
+          format: date-time
+          description: Date de création de la commande (ISO 8601, ne peut pas être dans le futur)
+
+    CreateCommandeResponse:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          description: Identifiant de la commande créée
+
+    CommandeStatus:
+      type: string
+      description: Statut d'une commande
+      enum:
+        - RECEIVED
+        - PAID
+        - PREPARING
+        - SENT
+
+    Error:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          description: Message d'erreur
+
+    UnsupportedMediaType:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Type d'erreur
+        message:
+          type: string
+          description: Message d'erreur
