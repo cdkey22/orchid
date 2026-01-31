@@ -26,28 +26,35 @@ npm install
 
 ### Configuration
 
-Toute la configuration est dans le fichier `.env` :
+Copier le fichier `.env.example` en `.env` et adapter les valeurs :
+
+```bash
+cp .env.example .env
+```
+
+Variables disponibles :
+
 ```env
+# Application
 NODE_ENV=development
 PORT=3000
 API_PREFIX=/api/v1
+LOG_LEVEL=info
 
 # MySQL
 DB_HOST=localhost
 DB_PORT=3306
 DB_NAME=tech_test
-DB_USER=root
-DB_PASSWORD=root_password
-
-# Redis
-REDIS_HOST=localhost
-REDIS_PORT=6379
+DB_USER=app_user
+DB_PASSWORD=app_password
+DB_CONNECTION_LIMIT=10
 
 # RabbitMQ
 RABBITMQ_HOST=localhost
 RABBITMQ_PORT=5672
 RABBITMQ_USER=guest
 RABBITMQ_PASSWORD=guest
+RABBITMQ_QUEUE_COMMANDE_STATUS=commande.status.changed
 ```
 
 ### Démarrer les services dépendants (pour tester pendant la phase de développement )
@@ -90,7 +97,7 @@ npm run test:coverage      # Avec rapport de couverture
 
 ### Tests d'Intégration
 
-Tests top-to-bottom avec **MySQL Testcontainers** (vraie base MySQL dans Docker).
+Tests top-to-bottom avec **Testcontainers** (MySQL + RabbitMQ dans Docker).
 
 ```bash
 npm run test:integration           # Exécuter les tests d'intégration
@@ -99,6 +106,10 @@ npm run test:coverage:integration  # Avec rapport de couverture
 ```
 
 **Prérequis** : Docker doit être en cours d'exécution.
+
+Les tests d'intégration vérifient :
+- L'insertion en base de données MySQL
+- La publication des messages dans RabbitMQ
 
 ### Tous les Tests
 
@@ -180,6 +191,7 @@ orchid/
     │   ├── index.ts         # Point d'entrée Express
     │   ├── config/
     │   │   ├── database.ts  # Pool de connexions MySQL
+    │   │   ├── rabbitmq.ts  # Connexion RabbitMQ
     │   │   └── logger.ts    # Configuration Winston
     │   ├── controllers/     # Gestion des requêtes HTTP
     │   │   └── types/       # Types utilitaires API
@@ -259,3 +271,31 @@ Base URL : `http://localhost:3000/api/v1`
 | POST | `/commandes` | Créer une nouvelle commande |
 
 Documentation complète : [openapi.yaml](openapi.yaml)
+
+## Événements RabbitMQ
+
+Un message est publiée à chaque changement de statut d'une commande.
+
+### Queue : `commande.status.changed` (configurable)
+
+**Configuration** : `RABBITMQ_QUEUE_COMMANDE_STATUS`
+
+**Format du message** :
+```json
+{
+  "clientId": 123,
+  "commandeId": 1,
+  "status": "RECEIVED"
+}
+```
+
+| Champ | Type | Description |
+|-------|------|-------------|
+| clientId | number | Identifiant du client |
+| commandeId | number | Identifiant de la commande |
+| status | string | Nouveau statut (`RECEIVED`, `PAID`, `PREPARING`, `SENT`) |
+
+**Caractéristiques** :
+- Queue durable
+- Messages persistants
+- Publiée lors de la création d'une commande (statut `RECEIVED`)
