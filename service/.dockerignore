@@ -1,0 +1,36 @@
+# Dépendances
+node_modules
+npm-debug.log
+
+# Fichiers de build
+dist
+*.log
+
+# Fichiers de test
+tests
+*.test.ts
+*.spec.ts
+coverage
+
+# Fichiers de configuration locale
+.env
+.env.local
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Documentation
+README.md
+*.md
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
