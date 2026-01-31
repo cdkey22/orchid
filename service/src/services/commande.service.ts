@@ -14,7 +14,9 @@ import {
   CommandeNotFoundError,
   CommandeStatusInvalid,
 } from '@/errors/commande.errors';
-import logger from '@/config/logger';
+import { createLogger } from '@/config/logger';
+
+const logger = createLogger('Commande:Svc');
 
 const statusWorkflow: CommandeStatus[] = [
   CommandeStatus.RECEIVED,
@@ -35,20 +37,20 @@ export class CommandeService {
   }
 
   async createCommande(clientId: ClientId, creationDate: CommandeCreationDate): Promise<Commande> {
-    logger.info('Service: Création commande ...', {
+    logger.info('Création commande ...', {
       clientId,
       creationDate: creationDate.toISOString(),
     });
 
     if (creationDate.getTime() > Date.now()) {
-      logger.info('Service: Date de création de commande incorrecte');
+      logger.info('Date de création de commande incorrecte');
       throw new CommandeCreationDateInFutureError();
     }
 
     try {
-      logger.debug('Service: Stockage dans la bdd ...');
+      logger.debug('Stockage dans la bdd ...');
       const commande = await this.bddCommandeDao.createCommande(clientId, creationDate);
-      logger.info('Service: Commande créée', { commandeId: commande.id });
+      logger.info('Commande créée', { commandeId: commande.id });
 
       await this.redisCommandeDao.setStatus(commande.id, commande.status);
 
@@ -61,7 +63,7 @@ export class CommandeService {
       return commande;
     } catch (error) {
       if (error instanceof Error) {
-        logger.error('Service: Erreur lors de la création de la commande', {
+        logger.error('Erreur lors de la création de la commande', {
           error: error.message,
         });
         throw new CommandeDaoError('la création de la commande', error);
@@ -86,25 +88,25 @@ export class CommandeService {
   }
 
   async updateStatus(commandeId: CommandeId, status: CommandeStatus): Promise<Commande> {
-    logger.info('Service: Mise à jour statut commande ...', {
+    logger.info('Mise à jour statut commande ...', {
       commandeId,
       status,
     });
 
     try {
-      logger.debug('Service: Récupération de la commande ...');
+      logger.debug('Récupération de la commande ...');
       const commande = await this.bddCommandeDao.findById(commandeId);
 
       if (!commande) {
-        logger.info('Service: Commande non trouvée', { commandeId });
+        logger.info('Commande non trouvée', { commandeId });
         throw new CommandeNotFoundError(commandeId);
       }
 
       this.processStatusWorkflow(commande, status);
 
-      logger.debug('Service: Mise à jour dans la bdd ...');
+      logger.debug('Mise à jour dans la bdd ...');
       await this.bddCommandeDao.updateStatus(commandeId, status);
-      logger.info('Service: Statut mis à jour', { commandeId, status });
+      logger.info('Statut mis à jour', { commandeId, status });
 
       await this.redisCommandeDao.setStatus(commandeId, status);
 
@@ -119,7 +121,7 @@ export class CommandeService {
         throw error;
       }
       if (error instanceof Error) {
-        logger.error('Service: Erreur lors de la mise à jour du statut', { error: error.message });
+        logger.error('Erreur lors de la mise à jour du statut', { error: error.message });
         throw new CommandeDaoError('la mise à jour du statut', error);
       }
       throw error;

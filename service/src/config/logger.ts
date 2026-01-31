@@ -2,8 +2,9 @@ import winston from 'winston';
 
 const { combine, timestamp, printf, colorize, errors } = winston.format;
 
-const logFormat = printf(({ level, message, timestamp, stack, ...metadata }) => {
-  let log = `${timestamp} [${level}] ${message}`;
+const logFormat = printf(({ level, message, timestamp, context, stack, ...metadata }) => {
+  const contextPrefix = context ? `[${context}] ` : '';
+  let log = `${timestamp} [${level}] ${contextPrefix}${message}`;
 
   if (Object.keys(metadata).length > 0) {
     log += ` ${JSON.stringify(metadata)}`;
@@ -25,5 +26,11 @@ const logger = winston.createLogger({
     }),
   ],
 });
+
+/**
+ * Crée un logger avec un contexte (préfixe automatique)
+ * @param context - Le contexte à afficher dans les logs (ex: 'Controller', 'Service', 'DAO')
+ */
+export const createLogger = (context: string) => logger.child({ context });
 
 export default logger;

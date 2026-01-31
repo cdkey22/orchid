@@ -1,5 +1,7 @@
 import amqplib from 'amqplib';
-import logger from '@/config/logger';
+import { createLogger } from '@/config/logger';
+
+const logger = createLogger('RabbitMQ:Cfg');
 
 const RABBITMQ_URL =
   process.env.RABBITMQ_URL ||
@@ -20,7 +22,7 @@ export async function getRabbitMQChannel(): Promise<amqplib.Channel> {
   }
 
   try {
-    logger.info('RabbitMQ: Connexion en cours...', {
+    logger.info('Connexion en cours...', {
       host: process.env.RABBITMQ_HOST,
       port: process.env.RABBITMQ_PORT,
     });
@@ -29,21 +31,21 @@ export async function getRabbitMQChannel(): Promise<amqplib.Channel> {
     channel = await connection.createChannel();
 
     connection.on('error', (err: Error) => {
-      logger.error('RabbitMQ: Erreur de connexion', { error: err.message });
+      logger.error('Erreur de connexion', { error: err.message });
       channel = null;
       connection = null;
     });
 
     connection.on('close', () => {
-      logger.warn('RabbitMQ: Connexion fermée');
+      logger.warn('Connexion fermée');
       channel = null;
       connection = null;
     });
 
-    logger.info('RabbitMQ: Connexion établie');
+    logger.info('Connexion établie');
     return channel;
   } catch (error) {
-    logger.error('RabbitMQ: Impossible de se connecter', {
+    logger.error('Impossible de se connecter', {
       error: error instanceof Error ? error.message : String(error),
     });
     throw error;
@@ -60,9 +62,9 @@ export async function closeRabbitMQ(): Promise<void> {
       await connection.close();
       connection = null;
     }
-    logger.info('RabbitMQ: Connexion fermée proprement');
+    logger.info('Connexion fermée proprement');
   } catch (error) {
-    logger.error('RabbitMQ: Erreur lors de la fermeture', {
+    logger.error('Erreur lors de la fermeture', {
       error: error instanceof Error ? error.message : String(error),
     });
   }

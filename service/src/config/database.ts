@@ -1,5 +1,7 @@
 import mysql from 'mysql2/promise';
-import logger from '@/config/logger';
+import { createLogger } from '@/config/logger';
+
+const logger = createLogger('MySQL');
 
 const dbConfig = {
   host: process.env.DB_HOST,

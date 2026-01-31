@@ -4,7 +4,9 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import versionRouter from '@/routes/router';
 import { requireJsonContentType } from '@/middlewares/contentType.middleware';
-import logger from '@/config/logger';
+import { createLogger } from '@/config/logger';
+
+const logger = createLogger('App');
 
 dotenv.config(); //Charge les variables d'environnement
 

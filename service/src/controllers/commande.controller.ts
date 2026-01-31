@@ -14,7 +14,9 @@ import {
   CommandeNotFoundError,
   CommandeStatusInvalid,
 } from '@/errors/commande.errors';
-import logger from '@/config/logger';
+import { createLogger } from '@/config/logger';
+
+const logger = createLogger('Commande:Ctrl');
 
 const AUCUN_CLIENT_ID_N_EST_FOURNI = "Aucun clientId n'est fourni";
 const LE_CLIENT_ID_FOURNI_EST_INVALIDE = 'Le clientId fourni est invalide';
@@ -32,25 +34,25 @@ export class CommandeController {
   }
 
   createCommande = async (req: Request, res: Response): Promise<void> => {
-    logger.info('Controller: POST /commandes ...', { body: req.body });
+    logger.info('POST /commandes ...', { body: req.body });
 
     try {
       const { clientId, date } = req.body;
 
       if (null == clientId) {
-        logger.info('Controller: POST /commandes [400] ', AUCUN_CLIENT_ID_N_EST_FOURNI);
+        logger.info('POST /commandes [400] ', AUCUN_CLIENT_ID_N_EST_FOURNI);
         generateError(res, 400, AUCUN_CLIENT_ID_N_EST_FOURNI);
         return;
       }
 
       if (clientId <= 0) {
-        logger.info('Controller: POST /commandes [400] ', LE_CLIENT_ID_FOURNI_EST_INVALIDE);
+        logger.info('POST /commandes [400] ', LE_CLIENT_ID_FOURNI_EST_INVALIDE);
         generateError(res, 400, LE_CLIENT_ID_FOURNI_EST_INVALIDE);
         return;
       }
 
       if (!date) {
-        logger.info('Controller: POST /commandes [400] ', AUCUNE_DATE_N_EST_FOURNIE);
+        logger.info('POST /commandes [400] ', AUCUNE_DATE_N_EST_FOURNIE);
         generateError(res, 400, AUCUNE_DATE_N_EST_FOURNIE);
         return;
       }
@@ -58,7 +60,7 @@ export class CommandeController {
       const validDate = new Date(date);
 
       if (isNaN(validDate.getTime())) {
-        logger.info('Controller: POST /commandes [400] ', LA_DATE_FOURNIE_INVALIDE);
+        logger.info('POST /commandes [400] ', LA_DATE_FOURNIE_INVALIDE);
         generateError(res, 400, LA_DATE_FOURNIE_INVALIDE);
         return;
       }
@@ -81,7 +83,7 @@ export class CommandeController {
   };
 
   updateStatus = async (req: Request, res: Response): Promise<void> => {
-    logger.info('Controller: PATCH /commandes/:id/status ...', {
+    logger.info('PATCH /commandes/:id/status ...', {
       params: req.params,
       body: req.body,
     });
@@ -92,7 +94,7 @@ export class CommandeController {
 
       if (!id) {
         logger.info(
-          'Controller: PATCH /commandes/:id/status [400] ',
+          'PATCH /commandes/:id/status [400] ',
           L_IDENTIFIANT_DE_COMMANDE_EST_INVALIDE
         );
         generateError(res, 400, L_IDENTIFIANT_DE_COMMANDE_EST_INVALIDE);
@@ -103,7 +105,7 @@ export class CommandeController {
 
       if (isNaN(commandeId) || commandeId <= 0) {
         logger.info(
-          'Controller: PATCH /commandes/:id/status [400] ',
+          'PATCH /commandes/:id/status [400] ',
           L_IDENTIFIANT_DE_COMMANDE_EST_INVALIDE
         );
         generateError(res, 400, L_IDENTIFIANT_DE_COMMANDE_EST_INVALIDE);
@@ -111,14 +113,14 @@ export class CommandeController {
       }
 
       if (null == status) {
-        logger.info('Controller: PATCH /commandes/:id/status [400] ', AUCUN_STATUT_N_EST_FOURNI);
+        logger.info('PATCH /commandes/:id/status [400] ', AUCUN_STATUT_N_EST_FOURNI);
         generateError(res, 400, AUCUN_STATUT_N_EST_FOURNI);
         return;
       }
 
       if (!Object.values(CommandeStatus).includes(status)) {
         logger.info(
-          'Controller: PATCH /commandes/:id/status [400] ',
+          'PATCH /commandes/:id/status [400] ',
           LE_STATUT_FOURNI_EST_INVALIDE
         );
         generateError(res, 400, LE_STATUT_FOURNI_EST_INVALIDE);

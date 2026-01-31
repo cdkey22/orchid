@@ -1,6 +1,8 @@
 import { getRedisClient } from '@/config/redis';
-import logger from '@/config/logger';
+import { createLogger } from '@/config/logger';
 import { CommandeId, CommandeStatus } from '@/models/commande';
+
+const logger = createLogger('Redis:DAO');
 
 export class RedisCommandeDao {
   private getKey(commandeId: CommandeId): string {
@@ -14,9 +16,9 @@ export class RedisCommandeDao {
 
       await client.set(key, status);
 
-      logger.info('Redis: Statut mis à jour', { commandeId, status, key });
+      logger.info('Statut mis à jour', { commandeId, status, key });
     } catch (error) {
-      logger.error('Redis: Erreur lors de la mise à jour du statut', {
+      logger.error('Erreur lors de la mise à jour du statut', {
         commandeId,
         status,
         error: error instanceof Error ? error.message : String(error),
@@ -32,11 +34,11 @@ export class RedisCommandeDao {
 
       const status = await client.get(key);
 
-      logger.debug('Redis: Statut récupéré', { commandeId, status, key });
+      logger.debug('Statut récupéré', { commandeId, status, key });
 
       return status as CommandeStatus | null;
     } catch (error) {
-      logger.error('Redis: Erreur lors de la récupération du statut', {
+      logger.error('Erreur lors de la récupération du statut', {
         commandeId,
         error: error instanceof Error ? error.message : String(error),
       });

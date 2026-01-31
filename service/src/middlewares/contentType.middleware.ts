@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import logger from '@/config/logger';
+import { createLogger } from '@/config/logger';
+
+const logger = createLogger('ContentType:Mw');
 
 /**
  * Middleware pour valider que le Content-Type est application/json
@@ -12,7 +14,7 @@ export const requireJsonContentType = (req: Request, res: Response, next: NextFu
 
     // Vérifier si le Content-Type contient application/json
     if (!contentType || !contentType.includes('application/json')) {
-      logger.info('Middleware: Content-Type invalide', {
+      logger.info('Content-Type invalide', {
         method: req.method,
         path: req.path,
         contentType: contentType || 'non défini',

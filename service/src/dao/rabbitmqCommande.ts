@@ -1,6 +1,8 @@
 import { getRabbitMQChannel, rabbitmqConfig } from '@/config/rabbitmq';
-import logger from '@/config/logger';
+import { createLogger } from '@/config/logger';
 import { ClientId, CommandeId, CommandeStatus } from '@/models/commande';
+
+const logger = createLogger('RabbitMQ:DAO');
 
 const QUEUE_NAME = rabbitmqConfig.queues.commandeStatusChanged;
 
@@ -31,14 +33,14 @@ export class RabbitmqCommandeDao {
 
       channel.sendToQueue(QUEUE_NAME, messageBuffer, { persistent: true });
 
-      logger.info('RabbitMQ: Message publié', {
+      logger.info('Message publié', {
         queue: QUEUE_NAME,
         commandeId,
         clientId,
         status,
       });
     } catch (error) {
-      logger.error('RabbitMQ: Erreur lors de la publication du message', {
+      logger.error('Erreur lors de la publication du message', {
         commandeId,
         clientId,
         status,
