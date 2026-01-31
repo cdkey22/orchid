@@ -2,13 +2,13 @@ import mysql from 'mysql2/promise';
 import logger from '@/config/logger';
 
 const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
+  host: process.env.DB_HOST,
   port: parseInt(process.env.DB_PORT || '3306'),
-  database: process.env.DB_NAME || 'tech_test',
-  user: process.env.DB_USER || 'app_user',
-  password: process.env.DB_PASSWORD || 'app_password',
+  database: process.env.DB_NAME,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
   waitForConnections: true,
-  connectionLimit: 10,
+  connectionLimit: parseInt(process.env.DB_CONNECTION_LIMIT || '10'),
   queueLimit: 0,
 };
 

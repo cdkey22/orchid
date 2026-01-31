@@ -9,7 +9,7 @@ import logger from '@/config/logger';
 dotenv.config(); //Charge les variables d'environnement
 
 const app: Application = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || '3000';
 const API_PREFIX = process.env.API_PREFIX || '/api/v1';
 
 logger.info('Initialisation du serveur', { port: PORT, apiPrefix: API_PREFIX });
