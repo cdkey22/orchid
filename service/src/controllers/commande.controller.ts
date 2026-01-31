@@ -1,7 +1,13 @@
 import { Request, Response } from 'express';
 import { CommandeService } from '@/services/commande.service';
 import { generateError } from '@/controllers/types/api';
-import { ClientId, Commande, CommandeCreationDate, CommandeId, CommandeStatus } from '@/models/commande';
+import {
+  ClientId,
+  Commande,
+  CommandeCreationDate,
+  CommandeId,
+  CommandeStatus,
+} from '@/models/commande';
 import {
   CommandeCreationDateInFutureError,
   CommandeDaoError,
@@ -75,14 +81,20 @@ export class CommandeController {
   };
 
   updateStatus = async (req: Request, res: Response): Promise<void> => {
-    logger.info('Controller: PATCH /commandes/:id/status ...', { params: req.params, body: req.body });
+    logger.info('Controller: PATCH /commandes/:id/status ...', {
+      params: req.params,
+      body: req.body,
+    });
 
     try {
       const { id } = req.params;
       const { status } = req.body;
 
       if (!id) {
-        logger.info('Controller: PATCH /commandes/:id/status [400] ', L_IDENTIFIANT_DE_COMMANDE_EST_INVALIDE);
+        logger.info(
+          'Controller: PATCH /commandes/:id/status [400] ',
+          L_IDENTIFIANT_DE_COMMANDE_EST_INVALIDE
+        );
         generateError(res, 400, L_IDENTIFIANT_DE_COMMANDE_EST_INVALIDE);
         return;
       }
@@ -90,7 +102,10 @@ export class CommandeController {
       const commandeId = parseInt(id, 10);
 
       if (isNaN(commandeId) || commandeId <= 0) {
-        logger.info('Controller: PATCH /commandes/:id/status [400] ', L_IDENTIFIANT_DE_COMMANDE_EST_INVALIDE);
+        logger.info(
+          'Controller: PATCH /commandes/:id/status [400] ',
+          L_IDENTIFIANT_DE_COMMANDE_EST_INVALIDE
+        );
         generateError(res, 400, L_IDENTIFIANT_DE_COMMANDE_EST_INVALIDE);
         return;
       }
@@ -102,15 +117,15 @@ export class CommandeController {
       }
 
       if (!Object.values(CommandeStatus).includes(status)) {
-        logger.info('Controller: PATCH /commandes/:id/status [400] ', LE_STATUT_FOURNI_EST_INVALIDE);
+        logger.info(
+          'Controller: PATCH /commandes/:id/status [400] ',
+          LE_STATUT_FOURNI_EST_INVALIDE
+        );
         generateError(res, 400, LE_STATUT_FOURNI_EST_INVALIDE);
         return;
       }
 
-      const commande: Commande = await this.commandeService.updateStatus(
-        commandeId as CommandeId,
-        status as CommandeStatus
-      );
+      await this.commandeService.updateStatus(commandeId as CommandeId, status as CommandeStatus);
 
       res.status(204).send();
       logger.info('PATCH /commandes/:id/status [204] Statut mis à jour avec succès');
@@ -139,7 +154,10 @@ export class CommandeController {
     }
 
     if (error instanceof CommandeDaoError) {
-      logger.error(`${context} [500] Erreur DAO`, { error: error.message, cause: error.cause.message });
+      logger.error(`${context} [500] Erreur DAO`, {
+        error: error.message,
+        cause: error.cause.message,
+      });
       generateError(res, 500, 'Une erreur est survenue lors du traitement de la commande');
       return;
     }
