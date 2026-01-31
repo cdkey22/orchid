@@ -7,9 +7,12 @@
     "dev": "nodemon",
     "build": "tsc && tsc-alias",
     "start": "node dist/index.js",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
+    "test:unit": "jest --config jest.config.unit.js",
+    "test:integration": "jest --config jest.config.integration.js",
+    "test": "npm run test:unit && npm run test:integration",
+    "test:coverage:unit": "jest --coverage --config jest.config.unit.js",
+    "test:coverage:integration": "jest --coverage --config jest.config.integration.js",
+    "test:coverage": "npm run test:coverage:unit && npm run test:coverage:integration",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
     "format": "prettier --write \"src/**/*.ts\""
@@ -17,10 +20,11 @@
   "author": "Cédric Clavier",
   "license": "ISC",
   "devDependencies": {
+    "@testcontainers/mysql": "^11.11.0",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
-    "@types/node": "^20.11.5",
     "@types/jest": "^29.5.11",
+    "@types/node": "^20.11.5",
     "@types/supertest": "^6.0.2",
     "@typescript-eslint/eslint-plugin": "^6.19.0",
     "@typescript-eslint/parser": "^6.19.0",
@@ -29,6 +33,7 @@
     "nodemon": "^3.0.3",
     "prettier": "^3.2.4",
     "supertest": "^6.3.4",
+    "testcontainers": "^11.11.0",
     "ts-jest": "^29.1.1",
     "ts-node": "^10.9.2",
     "tsc-alias": "^1.8.8",
@@ -36,15 +41,16 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "mysql2": "^3.9.0",
     "amqplib": "^0.10.3",
-    "redis": "^4.6.12",
-    "dotenv": "^16.4.1",
-    "joi": "^17.12.0",
-    "winston": "^3.11.0",
+    "class-validator": "^0.14.3",
     "cors": "^2.8.5",
+    "dotenv": "^16.4.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
     "helmet": "^7.1.0",
-    "express-rate-limit": "^7.1.5"
+    "joi": "^17.12.0",
+    "mysql2": "^3.9.0",
+    "redis": "^4.6.12",
+    "winston": "^3.11.0"
   }
 }
