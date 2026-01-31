@@ -31,6 +31,7 @@ export const startMySqlContainer = async (): Promise<StartedMySqlContainer> => {
     .withUsername('test_user')
     .withUserPassword('test_password')
     .withExposedPorts(3306)
+    .withReuse()
     .start();
 
   logger.info('✅ Conteneur MySQL démarré');
@@ -65,6 +66,7 @@ export const startRabbitMQContainer = async (): Promise<StartedRabbitMQContainer
 
   rabbitmqContainer = await new RabbitMQContainer('rabbitmq:3.12-management')
     .withExposedPorts(5672, 15672)
+    .withReuse()
     .start();
 
   logger.info('✅ Conteneur RabbitMQ démarré');
@@ -87,7 +89,10 @@ export const startRedisContainer = async (): Promise<StartedRedisContainer> => {
 
   logger.info('🚀 Démarrage du conteneur Redis pour les tests...');
 
-  redisContainer = await new RedisContainer('redis:7').withExposedPorts(6379).start();
+  redisContainer = await new RedisContainer('redis:7')
+    .withExposedPorts(6379)
+    .withReuse()
+    .start();
 
   logger.info('✅ Conteneur Redis démarré');
 
@@ -316,4 +321,42 @@ export const flushRedis = async (): Promise<void> => {
     throw new Error('Le client Redis n\'est pas initialisé');
   }
   await redisClient.flushAll();
+};
+
+/**
+ * Démarre tous les conteneurs en parallèle pour optimiser le temps de démarrage
+ */
+export const startAllContainers = async (): Promise<void> => {
+  logger.info('🚀 Démarrage de tous les conteneurs en parallèle...');
+
+  await Promise.all([
+    startMySqlContainer(),
+    startRabbitMQContainer(),
+    startRedisContainer(),
+  ]);
+
+  logger.info('✅ Tous les conteneurs sont prêts');
+};
+
+/**
+ * Arrête tous les conteneurs
+ * Si TESTCONTAINERS_KEEP_ALIVE=true, les conteneurs ne sont pas arrêtés (utile en dev)
+ */
+export const stopAllContainers = async (): Promise<void> => {
+  const keepAlive = process.env.TESTCONTAINERS_KEEP_ALIVE === 'true';
+
+  if (keepAlive) {
+    logger.info('⏸️ TESTCONTAINERS_KEEP_ALIVE=true : les conteneurs restent actifs');
+    return;
+  }
+
+  logger.info('🛑 Arrêt de tous les conteneurs...');
+
+  await Promise.all([
+    stopMySqlContainer(),
+    stopRabbitMQContainer(),
+    stopRedisContainer(),
+  ]);
+
+  logger.info('✅ Tous les conteneurs sont arrêtés');
 };
