@@ -9,6 +9,7 @@ export class VersionController {
   }
 
   getVersion = async (_req: Request, res: Response): Promise<void> => {
+
     try {
       const versionInfo = await this.versionService.getVersionInfo();
       res.status(200).json(versionInfo);

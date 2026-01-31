@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { VersionController } from '@/controllers/version.controller';
+import { CommandeController } from '@/controllers/commande.controller';
 
 const router = Router();
 
@@ -12,5 +13,12 @@ const router = Router();
 
 const versionController = new VersionController();
 router.get('/version', versionController.getVersion);
+
+/*----------------------------------------------------------------------------------------------------------------------
+ * Routes pour la gestion des commandes
+ ---------------------------------------------------------------------------------------------------------------------*/
+
+const commandeController = new CommandeController();
+router.post('/commandes', commandeController.createCommande);
 
 export default router;

@@ -1,6 +1,6 @@
 import { readFile } from 'fs/promises';
 import { join } from 'path';
-import { VersionInfo } from '@/models/dto/version';
+import { VersionInfo } from '@/models/version';
 
 /**
  * Attention ce service peut poser des problèmes de sécurité.
@@ -16,12 +16,14 @@ export class VersionService {
       description: string;
     };
 
-    return {
+    const versionInfo: VersionInfo = {
       name: packageJson.name,
       version: packageJson.version,
       description: packageJson.description,
       nodeVersion: process.version,
       environment: process.env.NODE_ENV || 'development',
     };
+
+    return versionInfo;
   }
 }

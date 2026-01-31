@@ -3,7 +3,7 @@ CREATE TABLE orders
 (
     id            BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
     client_id     BIGINT UNSIGNED NOT NULL,
-    status        ENUM('RECEIVED', 'PAID', 'PREPARING', 'SENT') NOT NULL DEFAULT 'RECEIVED',
+    status        ENUM('RECEIVED', 'PAID', 'PREPARING', 'SENT') NOT NULL,
     creation_date DATETIME NOT NULL
 );
 
