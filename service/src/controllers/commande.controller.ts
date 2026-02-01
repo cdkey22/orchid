@@ -26,6 +26,12 @@ const AUCUN_STATUT_N_EST_FOURNI = "Aucun statut n'est fourni";
 const LE_STATUT_FOURNI_EST_INVALIDE = 'Le statut fourni est invalide';
 const L_IDENTIFIANT_DE_COMMANDE_EST_INVALIDE = "L'identifiant de commande est invalide";
 
+interface CreateCommandeRestDto  {
+  clientId: number,
+  date: string
+}
+
+
 export class CommandeController {
   private commandeService: CommandeService;
 
@@ -33,11 +39,12 @@ export class CommandeController {
     this.commandeService = new CommandeService();
   }
 
+
   createCommande = async (req: Request, res: Response): Promise<void> => {
-    logger.info('POST /commandes ...', { body: req.body });
+    logger.info('POST /commandes ...', { "body": req.body });
 
     try {
-      const { clientId, date } = req.body;
+      const { clientId, date } = req.body as CreateCommandeRestDto;
 
       if (null == clientId) {
         logger.info('POST /commandes [400] ', AUCUN_CLIENT_ID_N_EST_FOURNI);

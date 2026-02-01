@@ -6,7 +6,6 @@ import { join } from 'path';
 import mysql from 'mysql2/promise';
 import amqplib from 'amqplib';
 import { createClient, RedisClientType } from 'redis';
-import logger   from "@/config/logger";
 
 let mysqlContainer: StartedMySqlContainer | null = null;
 let rabbitmqContainer: StartedRabbitMQContainer | null = null;
@@ -15,6 +14,8 @@ let pool: mysql.Pool | null = null;
 let rabbitmqConnection: amqplib.ChannelModel | null = null;
 let rabbitmqChannel: amqplib.Channel | null = null;
 let redisClient: RedisClientType | null = null;
+
+const logger = createLogger("Test container")
 
 /**
  * Démarre un conteneur MySQL pour les tests
