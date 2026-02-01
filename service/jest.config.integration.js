@@ -3,6 +3,7 @@ module.exports = {
   testEnvironment: 'node',
   roots: ['<rootDir>/tests/integration'],
   testMatch: ['**/*.integration.test.ts'],
+  setupFilesAfterEnv: ['<rootDir>/tests/integration/support/jest.setup.ts'],
   testPathIgnorePatterns: ['/node_modules/', '/tests/unit/'],
   collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts', '!src/api.ts'],
   coverageDirectory: 'coverage-integration',
