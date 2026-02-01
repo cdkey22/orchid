@@ -98,8 +98,8 @@ Le projet utilise **Jest** avec deux types de tests.
 ### Tests Unitaires
 
 ```bash
-npm run test:unit      # Exécuter les tests unitaires
-npm run test:watch     # Mode watch (développement)
+npm run test:unit              # Exécuter les tests unitaires
+npm run test:coverage:unit     # Avec rapport de couverture
 ```
 
 ### Tests d'Intégration
@@ -107,21 +107,14 @@ npm run test:watch     # Mode watch (développement)
 Tests avec **Testcontainers** (MySQL + RabbitMQ + Redis dans Docker).
 
 ```bash
-npm run test:integration             # Exécuter les tests d'intégration
-npm run test:integration:keep-alive  # Garder les conteneurs actifs
-npm run test:coverage:integration    # Avec rapport de couverture
+npm run test:integration           # Exécuter les tests d'intégration
+npm run test:coverage:integration  # Avec rapport de couverture
+npm run test:containers:stop       # Arrêter les conteneurs manuellement
 ```
 
 **Prérequis** : Docker doit être en cours d'exécution.
 
-### Optimisation Testcontainers
-
-Les conteneurs sont configurés avec `withReuse()` et démarrés en parallèle.
-
-```bash
-npm run test:integration:keep-alive  # Garder les conteneurs actifs
-npm run test:containers:stop         # Arrêter les conteneurs manuellement
-```
+Les conteneurs sont configurés avec `withReuse()` et restent actifs entre les exécutions pour accélérer les tests.
 
 ### Tous les tests
 
