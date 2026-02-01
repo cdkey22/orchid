@@ -109,12 +109,26 @@ Tests avec **Testcontainers** (MySQL + RabbitMQ + Redis dans Docker).
 ```bash
 npm run test:integration           # Exécuter les tests d'intégration
 npm run test:coverage:integration  # Avec rapport de couverture
-npm run test:containers:stop       # Arrêter les conteneurs manuellement
 ```
 
 **Prérequis** : Docker doit être en cours d'exécution.
 
-Les conteneurs sont configurés avec `withReuse()` et restent actifs entre les exécutions pour accélérer les tests.
+#### Réutilisation des conteneurs
+
+Les conteneurs sont configurés avec `withReuse()` pour accélérer les exécutions successives :
+
+- **Premier run** : ~50s (démarrage des conteneurs)
+- **Runs suivants** : ~20s (conteneurs réutilisés)
+
+Testcontainers identifie les conteneurs existants via un hash de configuration stocké dans les labels Docker. Les conteneurs restent actifs entre les exécutions.
+
+```bash
+# Voir les conteneurs réutilisables
+docker ps --filter "label=org.testcontainers.reuse=true"
+
+# Arrêter manuellement les conteneurs
+docker stop $(docker ps -q --filter "label=org.testcontainers.reuse=true")
+```
 
 ### Tous les tests
 

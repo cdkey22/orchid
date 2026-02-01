@@ -10,7 +10,7 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
-  testTimeout: 120000, // 2 minutes pour le démarrage des conteneurs
+  testTimeout: 60000, // 1 minutes pour le démarrage des conteneurs
   maxWorkers: 1, // Exécuter les tests en série pour éviter les conflits de conteneurs
   silent: false, // Afficher les logs (console.log, winston, etc.)
 };

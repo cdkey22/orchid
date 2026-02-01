@@ -28,20 +28,12 @@ jest.mock('@/config/database', () => ({
 // Mock de la config RabbitMQ pour utiliser le conteneur de test
 jest.mock('@/config/rabbitmq', () => {
   const originalModule = jest.requireActual('@/config/rabbitmq');
-  let testChannel: any = null;
 
   return {
     ...originalModule,
     getRabbitMQChannel: jest.fn(async () => {
-      if (testChannel) {
-        return testChannel;
-      }
-
-      const amqplib = require('amqplib');
-      const { getRabbitMQUrl } = require('./setup/testcontainers.setup');
-      const connection = await amqplib.connect(getRabbitMQUrl());
-      testChannel = await connection.createChannel();
-      return testChannel;
+      const { getTestRabbitMQChannel } = require('./setup/testcontainers.setup');
+      return getTestRabbitMQChannel();
     }),
   };
 });
