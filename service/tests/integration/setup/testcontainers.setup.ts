@@ -8,13 +8,16 @@ import amqplib from 'amqplib';
 import { createClient, RedisClientType } from 'redis';
 import { createLogger } from '@/config/logger';
 
-let mysqlContainer: StartedMySqlContainer | null = null;
-let rabbitmqContainer: StartedRabbitMQContainer | null = null;
-let redisContainer: StartedRedisContainer | null = null;
 let pool: mysql.Pool | null = null;
 let rabbitmqConnection: amqplib.ChannelModel | null = null;
 let rabbitmqChannel: amqplib.Channel | null = null;
 let redisClient: RedisClientType | null = null;
+
+let startedContainers: {
+  mysqlContainer?: StartedMySqlContainer;
+  rabbitmqContainer?: StartedRabbitMQContainer;
+  redisContainer?: StartedRedisContainer;
+} = {};
 
 const logger = createLogger('TestContainers');
 
@@ -22,11 +25,11 @@ const logger = createLogger('TestContainers');
  * Démarre le conteneur MySQL et initialise le pool de connexions
  */
 const startMySqlContainer = async (): Promise<void> => {
-  if (mysqlContainer) return;
+  if (startedContainers.mysqlContainer) return;
 
   logger.info('Démarrage du conteneur MySQL...');
 
-  mysqlContainer = await new MySqlContainer('mysql:8.0')
+  startedContainers.mysqlContainer = await new MySqlContainer('mysql:8.0')
     .withDatabase('tech_test')
     .withUsername('test_user')
     .withUserPassword('test_password')
@@ -35,11 +38,11 @@ const startMySqlContainer = async (): Promise<void> => {
     .start();
 
   pool = mysql.createPool({
-    host: mysqlContainer.getHost(),
-    port: mysqlContainer.getPort(),
-    database: mysqlContainer.getDatabase(),
-    user: mysqlContainer.getUsername(),
-    password: mysqlContainer.getUserPassword(),
+    host: startedContainers.mysqlContainer.getHost(),
+    port: startedContainers.mysqlContainer.getPort(),
+    database: startedContainers.mysqlContainer.getDatabase(),
+    user: startedContainers.mysqlContainer.getUsername(),
+    password: startedContainers.mysqlContainer.getUserPassword(),
     waitForConnections: true,
     connectionLimit: 10,
     multipleStatements: true,
@@ -62,16 +65,16 @@ const startMySqlContainer = async (): Promise<void> => {
  * Démarre le conteneur RabbitMQ et initialise la connexion
  */
 const startRabbitMQContainer = async (): Promise<void> => {
-  if (rabbitmqContainer) return;
+  if (startedContainers.rabbitmqContainer) return;
 
   logger.info('Démarrage du conteneur RabbitMQ...');
 
-  rabbitmqContainer = await new RabbitMQContainer('rabbitmq:3.12-management')
+  startedContainers.rabbitmqContainer = await new RabbitMQContainer('rabbitmq:3.12-management')
     .withExposedPorts(5672, 15672)
     .withReuse()
     .start();
 
-  rabbitmqConnection = await amqplib.connect(rabbitmqContainer.getAmqpUrl());
+  rabbitmqConnection = await amqplib.connect(startedContainers.rabbitmqContainer.getAmqpUrl());
   rabbitmqChannel = await rabbitmqConnection.createChannel();
 
   logger.info('Conteneur RabbitMQ prêt');
@@ -81,16 +84,16 @@ const startRabbitMQContainer = async (): Promise<void> => {
  * Démarre le conteneur Redis et initialise le client
  */
 const startRedisContainer = async (): Promise<void> => {
-  if (redisContainer) return;
+  if (startedContainers.redisContainer) return;
 
   logger.info('Démarrage du conteneur Redis...');
 
-  redisContainer = await new RedisContainer('redis:7')
+  startedContainers.redisContainer = await new RedisContainer('redis:7')
     .withExposedPorts(6379)
     .withReuse()
     .start();
 
-  redisClient = createClient({ url: redisContainer.getConnectionUrl() });
+  redisClient = createClient({ url: startedContainers.redisContainer.getConnectionUrl() });
   await redisClient.connect();
 
   logger.info('Conteneur Redis prêt');
@@ -136,11 +139,6 @@ export const stopAllContainers = async (): Promise<void> => {
     await redisClient.quit();
     redisClient = null;
   }
-
-  // Réinitialiser les références pour recréer les clients au prochain run
-  mysqlContainer = null;
-  rabbitmqContainer = null;
-  redisContainer = null;
 
   logger.info('Conteneurs arrêtés');
 };
