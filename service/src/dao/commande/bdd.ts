@@ -11,7 +11,7 @@ import {
 } from '@/models/commande';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 
-export class BddCommandeDao {
+export class CommandeBddDao {
   async createCommande(clientId: ClientId, creationDate: CommandeCreationDate): Promise<Commande> {
     logger.debug('Acquisition connexion depuis le pool', { clientId });
     const connection = await pool.getConnection();

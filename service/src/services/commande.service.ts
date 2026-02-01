@@ -5,12 +5,13 @@ import {
   CommandeId,
   CommandeStatus,
 } from '@/models/commande';
-import { BddCommandeDao } from '@/dao/bddCommande';
-import { RabbitmqCommandeDao } from '@/dao/rabbitmqCommande';
-import { RedisCommandeDao } from '@/dao/redisCommande';
+import { CommandeBddDao } from '@/dao/bddCommande';
+import { CommandeRabbitmqDao } from '@/dao/rabbitmqCommande';
+import { CommandeRedisDao } from '@/dao/redisCommande';
 import {
   CommandeCreationDateInFutureError,
   CommandeDaoError,
+  CommandeError,
   CommandeNotFoundError,
   CommandeStatusInvalid,
 } from '@/errors/commande.errors';
@@ -26,14 +27,14 @@ const statusWorkflow: CommandeStatus[] = [
 ];
 
 export class CommandeService {
-  private bddCommandeDao: BddCommandeDao;
-  private rabbitmqCommandeDao: RabbitmqCommandeDao;
-  private redisCommandeDao: RedisCommandeDao;
+  private bddCommandeDao: CommandeBddDao;
+  private rabbitmqCommandeDao: CommandeRabbitmqDao;
+  private redisCommandeDao: CommandeRedisDao;
 
   constructor() {
-    this.bddCommandeDao = new BddCommandeDao();
-    this.rabbitmqCommandeDao = new RabbitmqCommandeDao();
-    this.redisCommandeDao = new RedisCommandeDao();
+    this.bddCommandeDao = new CommandeBddDao();
+    this.rabbitmqCommandeDao = new CommandeRabbitmqDao();
+    this.redisCommandeDao = new CommandeRedisDao();
   }
 
   async createCommande(clientId: ClientId, creationDate: CommandeCreationDate): Promise<Commande> {
@@ -117,7 +118,7 @@ export class CommandeService {
         status,
       };
     } catch (error) {
-      if (error instanceof CommandeNotFoundError || error instanceof CommandeStatusInvalid) {
+      if (error instanceof CommandeError) {
         throw error;
       }
       if (error instanceof Error) {
