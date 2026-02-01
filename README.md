@@ -191,7 +191,8 @@ orchid/
 └── service/
     ├── Dockerfile
     ├── src/
-    │   ├── index.ts         # Point d'entrée Express
+    │   ├── index.ts         # Point d'entrée (démarrage serveur)
+    │   ├── app.ts           # Configuration Express (middlewares, routes)
     │   ├── config/          # Configuration (database, redis, rabbitmq, logger)
     │   ├── controllers/     # Gestion des requêtes HTTP
     │   ├── services/        # Logique métier
@@ -203,7 +204,9 @@ orchid/
     │
     └── tests/
         ├── unit/            # Tests unitaires (avec mocks)
-        └── integration/     # Tests d'intégration (Testcontainers)
+        └── integration/
+            ├── *.test.ts    # Tests d'intégration
+            └── support/     # Infrastructure de test (Testcontainers)
 ```
 
 ## Architecture en couches
