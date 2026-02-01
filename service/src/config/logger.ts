@@ -32,5 +32,3 @@ const logger = winston.createLogger({
  * @param context - Le contexte à afficher dans les logs (ex: 'Controller', 'Service', 'DAO')
  */
 export const createLogger = (context: string) => logger.child({ context });
-
-export default logger;

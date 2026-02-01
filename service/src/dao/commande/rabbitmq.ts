@@ -12,7 +12,7 @@ export interface CommandeStatusMessage {
   status: CommandeStatus;
 }
 
-export class RabbitmqCommandeDao {
+export class CommandeRabbitmqDao {
   async publishStatusChange(
     commandeId: CommandeId,
     clientId: ClientId,

@@ -4,7 +4,7 @@ import { CommandeId, CommandeStatus } from '@/models/commande';
 
 const logger = createLogger('Redis:DAO');
 
-export class RedisCommandeDao {
+export class CommandeRedisDao {
   private getKey(commandeId: CommandeId): string {
     return `commande:${commandeId}:status`;
   }

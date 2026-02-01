@@ -8,8 +8,7 @@
     "build": "tsc && tsc-alias",
     "start": "node dist/index.js",
     "test:unit": "jest --config jest.config.unit.js",
-    "test:integration": "jest --config jest.config.integration.js",
-    "test:integration:keep-alive": "TESTCONTAINERS_KEEP_ALIVE=true jest --config jest.config.integration.js",
+    "test:integration": "jest --config jest.config.integration.js --detectOpenHandles",
     "test": "npm run test:unit && npm run test:integration",
     "test:coverage:unit": "jest --coverage --config jest.config.unit.js",
     "test:coverage:integration": "jest --coverage --config jest.config.integration.js",
@@ -47,13 +46,10 @@
   },
   "dependencies": {
     "amqplib": "^0.10.3",
-    "class-validator": "^0.14.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.1",
     "express": "^4.18.2",
-    "express-rate-limit": "^7.1.5",
     "helmet": "^7.1.0",
-    "joi": "^17.12.0",
     "mysql2": "^3.9.0",
     "redis": "^4.6.12",
     "winston": "^3.11.0"

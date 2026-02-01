@@ -98,8 +98,8 @@ Le projet utilise **Jest** avec deux types de tests.
 ### Tests Unitaires
 
 ```bash
-npm run test:unit      # Exécuter les tests unitaires
-npm run test:watch     # Mode watch (développement)
+npm run test:unit              # Exécuter les tests unitaires
+npm run test:coverage:unit     # Avec rapport de couverture
 ```
 
 ### Tests d'Intégration
@@ -107,20 +107,27 @@ npm run test:watch     # Mode watch (développement)
 Tests avec **Testcontainers** (MySQL + RabbitMQ + Redis dans Docker).
 
 ```bash
-npm run test:integration             # Exécuter les tests d'intégration
-npm run test:integration:keep-alive  # Garder les conteneurs actifs
-npm run test:coverage:integration    # Avec rapport de couverture
+npm run test:integration           # Exécuter les tests d'intégration
+npm run test:coverage:integration  # Avec rapport de couverture
 ```
 
 **Prérequis** : Docker doit être en cours d'exécution.
 
-### Optimisation Testcontainers
+#### Réutilisation des conteneurs
 
-Les conteneurs sont configurés avec `withReuse()` et démarrés en parallèle.
+Les conteneurs sont configurés avec `withReuse()` pour accélérer les exécutions successives :
+
+- **Premier run** : ~50s (démarrage des conteneurs)
+- **Runs suivants** : ~20s (conteneurs réutilisés)
+
+Testcontainers identifie les conteneurs existants via un hash de configuration stocké dans les labels Docker. Les conteneurs restent actifs entre les exécutions.
 
 ```bash
-npm run test:integration:keep-alive  # Garder les conteneurs actifs
-npm run test:containers:stop         # Arrêter les conteneurs manuellement
+# Voir les conteneurs réutilisables
+docker ps --filter "label=org.testcontainers.reuse=true"
+
+# Arrêter manuellement les conteneurs
+docker stop $(docker ps -q --filter "label=org.testcontainers.reuse=true")
 ```
 
 ### Tous les tests
@@ -184,7 +191,8 @@ orchid/
 └── service/
     ├── Dockerfile
     ├── src/
-    │   ├── index.ts         # Point d'entrée Express
+    │   ├── index.ts         # Point d'entrée (démarrage serveur)
+    │   ├── app.ts           # Configuration Express (middlewares, routes)
     │   ├── config/          # Configuration (database, redis, rabbitmq, logger)
     │   ├── controllers/     # Gestion des requêtes HTTP
     │   ├── services/        # Logique métier
@@ -196,7 +204,9 @@ orchid/
     │
     └── tests/
         ├── unit/            # Tests unitaires (avec mocks)
-        └── integration/     # Tests d'intégration (Testcontainers)
+        └── integration/
+            ├── *.test.ts    # Tests d'intégration
+            └── support/     # Infrastructure de test (Testcontainers)
 ```
 
 ## Architecture en couches
