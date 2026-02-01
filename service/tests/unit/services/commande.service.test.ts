@@ -1,7 +1,7 @@
 import { CommandeService } from '@/services/commande.service';
-import { BddCommandeDao } from '@/dao/bddCommande';
-import { RabbitmqCommandeDao } from '@/dao/rabbitmqCommande';
-import { RedisCommandeDao } from '@/dao/redisCommande';
+import { CommandeBddDao } from '@/dao/commande/bdd';
+import { CommandeRabbitmqDao } from '@/dao/commande/rabbitmq';
+import { CommandeRedisDao } from '@/dao/commande/redis';
 import { ClientId, CommandeCreationDate, CommandeId, CommandeStatus } from '@/models/commande';
 import {
   CommandeCreationDateInFutureError,
@@ -10,20 +10,20 @@ import {
   CommandeStatusInvalid,
 } from '@/errors/commande.errors';
 
-jest.mock('@/dao/bddCommande');
-jest.mock('@/dao/rabbitmqCommande');
-jest.mock('@/dao/redisCommande');
+jest.mock('@/dao/commande/bdd');
+jest.mock('@/dao/commande/rabbitmq');
+jest.mock('@/dao/commande/redis');
 
 describe('CommandeService', () => {
   let commandeService: CommandeService;
-  let mockBddCommandeDao: jest.Mocked<BddCommandeDao>;
-  let mockRabbitmqCommandeDao: jest.Mocked<RabbitmqCommandeDao>;
-  let mockRedisCommandeDao: jest.Mocked<RedisCommandeDao>;
+  let mockBddCommandeDao: jest.Mocked<CommandeBddDao>;
+  let mockRabbitmqCommandeDao: jest.Mocked<CommandeRabbitmqDao>;
+  let mockRedisCommandeDao: jest.Mocked<CommandeRedisDao>;
 
   beforeEach(() => {
-    mockBddCommandeDao = new BddCommandeDao() as jest.Mocked<BddCommandeDao>;
-    mockRabbitmqCommandeDao = new RabbitmqCommandeDao() as jest.Mocked<RabbitmqCommandeDao>;
-    mockRedisCommandeDao = new RedisCommandeDao() as jest.Mocked<RedisCommandeDao>;
+    mockBddCommandeDao = new CommandeBddDao() as jest.Mocked<CommandeBddDao>;
+    mockRabbitmqCommandeDao = new CommandeRabbitmqDao() as jest.Mocked<CommandeRabbitmqDao>;
+    mockRedisCommandeDao = new CommandeRedisDao() as jest.Mocked<CommandeRedisDao>;
     commandeService = new CommandeService();
     (commandeService as any).bddCommandeDao = mockBddCommandeDao;
     (commandeService as any).rabbitmqCommandeDao = mockRabbitmqCommandeDao;

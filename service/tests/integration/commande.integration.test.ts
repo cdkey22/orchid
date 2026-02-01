@@ -2,9 +2,9 @@ import request from 'supertest';
 import express, { Application } from 'express';
 import { CommandeController } from '@/controllers/commande.controller';
 import { CommandeService } from '@/services/commande.service';
-import { BddCommandeDao } from '@/dao/bddCommande';
-import { RabbitmqCommandeDao } from '@/dao/rabbitmqCommande';
-import { RedisCommandeDao } from '@/dao/redisCommande';
+import { CommandeBddDao } from '@/dao/commande/bdd';
+import { CommandeRabbitmqDao } from '@/dao/commande/rabbitmq';
+import { CommandeRedisDao } from '@/dao/commande/redis';
 import {
   cleanDatabase,
   consumeMessage,
@@ -72,9 +72,9 @@ describe('Commande API', () => {
     app.use(express.json());
 
     // Créer les vraies instances
-    const bddCommandeDao = new BddCommandeDao();
-    const rabbitmqCommandeDao = new RabbitmqCommandeDao();
-    const redisCommandeDao = new RedisCommandeDao();
+    const bddCommandeDao = new CommandeBddDao();
+    const rabbitmqCommandeDao = new CommandeRabbitmqDao();
+    const redisCommandeDao = new CommandeRedisDao();
     const commandeService = new CommandeService();
     (commandeService as any).bddCommandeDao = bddCommandeDao;
     (commandeService as any).rabbitmqCommandeDao = rabbitmqCommandeDao;

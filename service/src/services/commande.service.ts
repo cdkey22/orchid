@@ -5,9 +5,9 @@ import {
   CommandeId,
   CommandeStatus,
 } from '@/models/commande';
-import { CommandeBddDao } from '@/dao/bddCommande';
-import { CommandeRabbitmqDao } from '@/dao/rabbitmqCommande';
-import { CommandeRedisDao } from '@/dao/redisCommande';
+import { CommandeBddDao } from '@/dao/commande/bdd';
+import { CommandeRabbitmqDao } from '@/dao/commande/rabbitmq';
+import { CommandeRedisDao } from '@/dao/commande/redis';
 import {
   CommandeCreationDateInFutureError,
   CommandeDaoError,

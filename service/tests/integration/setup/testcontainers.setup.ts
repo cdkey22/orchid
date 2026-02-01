@@ -6,6 +6,7 @@ import { join } from 'path';
 import mysql from 'mysql2/promise';
 import amqplib from 'amqplib';
 import { createClient, RedisClientType } from 'redis';
+import { createLogger } from '@/config/logger';
 
 let mysqlContainer: StartedMySqlContainer | null = null;
 let rabbitmqContainer: StartedRabbitMQContainer | null = null;
